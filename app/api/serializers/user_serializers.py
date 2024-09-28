@@ -142,8 +142,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # Get the user account type
         account_type = get_account_type(self.user)
+        print("Username:", self.user.username)
+        print("Email:", self.user.email)
+        print("Contact Number:", self.user.contact_number)
+        print("Contact Number:", self.user.address)
 
-        # Add the account type to the token response
+        data['username'] = self.user.username  # Add username
+        data['email'] = self.user.email
+        data['address'] = self.user.address
+        data['contact_number'] = self.user.contact_number
         data['account_type'] = account_type
 
         return data
