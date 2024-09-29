@@ -5,11 +5,12 @@ from firebase_admin import storage
 from app.firebase import db, bucket
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from app.firebase import db
 import uuid
 
 
 
-class ReportSerializer(serializers.ModelSerializer):
+class AddReportSerializer(serializers.ModelSerializer):
     image_path = serializers.CharField(required=False, allow_blank=True)
     class Meta: 
         model = Report
@@ -21,8 +22,9 @@ class ReportSerializer(serializers.ModelSerializer):
             return value
     def create(self, validated_data):
         user = self.context['request'].user
-        image_path = ''
+        report_uuid = uuid.uuid4()
         report_data = {
+                    'report_id': str(report_uuid),
                     'user_id': user.id,                   
                     'type_of_report': validated_data['type_of_report'],
                     'report_description': validated_data['report_description'],
@@ -56,9 +58,10 @@ class ReportSerializer(serializers.ModelSerializer):
 
          # Add the report to Firestore
         db.collection('reports').add(report_data)
-
+        
         # Save the report in the database // this not include the firebase
         report = Report(
+            report_id=report_uuid,
             user_id=user.id,
             image_path=image_path_string,
             type_of_report=validated_data['type_of_report'],
@@ -72,3 +75,30 @@ class ReportSerializer(serializers.ModelSerializer):
         )
         report.save()
         return report
+    
+
+class UpdateReportSerializer(serializers.ModelSerializer):
+       
+       class Meta:
+            model = Report
+            fields = ['type_of_report', 'report_description', 'category']
+      
+       def update(self, instance, validated_data):
+             request = self.context.get('request')
+             user = request.user 
+             if instance.user == user or user.role.lower() == 'citizen':
+                return super().update(instance, validated_data)
+             else:
+                raise serializers.ValidationError("You are not authorized to update this report.")
+
+
+# class DeleteReportSerializer(serializers.ModelSerializer):
+
+
+
+             
+        
+
+      
+        
+    

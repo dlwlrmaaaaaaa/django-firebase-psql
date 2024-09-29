@@ -10,8 +10,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
 from .serializers.user_serializers import CitizenSerializer, DepartmentAdminSerializer
-from .serializers.report_serializers import ReportSerializer
-
+from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
+from .models import Report
 
 class AssignRoleView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsSuperAdmin]  # Only super admins can assign roles
@@ -49,7 +49,26 @@ class MyTokenObtainPairView(TokenObtainPairView):
 
 class ReportView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsCitizen]
-    serializer_class = ReportSerializer
+    serializer_class = AddReportSerializer
+
+class UpdateReportView(generics.UpdateAPIView):
+    queryset = Report.objects.all()
+    permission_classes = [AllowAny]
+    serializer_class = UpdateReportSerializer
+
+    def put(self, request, report_id):
+        try:
+            report = Report.objects.get(report_id=report_id)
+        except Report.DoesNotExist:
+            return Response({"error": "Report not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        serializer = UpdateReportSerializer(report, data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SomeView(APIView):
     permission_classes = [IsAuthenticated, IsSuperAdmin]  # Or any other permission class
