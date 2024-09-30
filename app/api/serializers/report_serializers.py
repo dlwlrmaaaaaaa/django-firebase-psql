@@ -92,7 +92,8 @@ class UpdateReportSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("You are not authorized to update this report.")
 
 
-# class DeleteReportSerializer(serializers.ModelSerializer):
+
+     
 
 
 
