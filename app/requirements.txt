@@ -2,3 +2,5 @@ django
 djangorestframework
 psycopg2
 firebase-admin
+pillow
+corsheaders
