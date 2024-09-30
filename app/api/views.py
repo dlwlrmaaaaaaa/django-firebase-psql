@@ -10,31 +10,17 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
 from .serializers.user_serializers import CitizenSerializer, DepartmentAdminSerializer
-<<<<<<< HEAD
-from .serializers.report_serializers import ReportSerializer
+from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
+from .models import Report
 from .serializers.otp_serializer import OTPVerificationSerializer
+from django.core.mail import send_mail
 from django.http import HttpResponse
+import random
+from django.conf import settings
 
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-
-
-
-from django.core.mail import send_mail
-import random
-from django.conf import settings
-
-User = get_user_model()
-
-
-otp_store = {}
-
-
-=======
-from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
-from .models import Report
->>>>>>> 60eb0b4e51439de5f26c5eac9c2511d5157f3c90
 
 class AssignRoleView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsSuperAdmin]  # Only super admins can assign roles
