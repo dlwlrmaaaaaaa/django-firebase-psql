@@ -10,8 +10,31 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
 from .serializers.user_serializers import CitizenSerializer, DepartmentAdminSerializer
+<<<<<<< HEAD
+from .serializers.report_serializers import ReportSerializer
+from .serializers.otp_serializer import OTPVerificationSerializer
+from django.http import HttpResponse
+
+from django.shortcuts import redirect
+from django.urls import reverse
+from django.contrib.auth import get_user_model
+
+
+
+from django.core.mail import send_mail
+import random
+from django.conf import settings
+
+User = get_user_model()
+
+
+otp_store = {}
+
+
+=======
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .models import Report
+>>>>>>> 60eb0b4e51439de5f26c5eac9c2511d5157f3c90
 
 class AssignRoleView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsSuperAdmin]  # Only super admins can assign roles
@@ -35,6 +58,31 @@ class CitizenRegitsration(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = CitizenSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        # Send OTP after successful registration
+        otp = random.randint(100000, 999999)  # Generate a random 6-digit OTP
+
+        user.otp = str(otp)  # Store as string to preserve leading zeros
+        user.save()
+
+        self.send_verification_email(user.email, otp)
+
+        return redirect('verify')  # Redirect to verification page
+        
+        
+    
+    def send_verification_email(self, email, otp):
+        subject = "Verify your email"
+        message = f"Your OTP is: {otp} gago ka hahaha"  # Message to be sent
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [email]
+        send_mail(subject, message, from_email, recipient_list)
+    
+    
 class DepartmentRegistration(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsSuperAdmin]
     serializer_class = DepartmentAdminSerializer
@@ -76,4 +124,47 @@ class SomeView(APIView):
     def get(self, request):
         # Your logic here
         return Response({"message": "This is a super admin view."}, status=status.HTTP_200_OK)
+    
 
+class OTPVerificationView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = OTPVerificationSerializer  # Use the updated serializer
+
+    def get(self, request, *args, **kwargs):
+        # Return a message when the verification page is accessed
+        return Response({
+            "message": "An email containing the OTP has been sent to your email address."
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)  # Validate incoming data
+        
+        otp_input = serializer.validated_data['otp']  # Extract the OTP
+
+        try:
+            # Fetch the user based on the OTP
+            user = User.objects.get(otp=otp_input)  
+            
+            if user.otp == otp_input:  # Compare the input OTP with the stored one
+                    user.otp = None  # Clear the OTP after verification
+                    user.is_email_verified = True  # Set is_email_verified to True
+                    user.save()  # Save changes to the database
+                    
+                    return HttpResponse(""" 
+                        <html>
+                        <head>
+                            <script>
+                                alert('OTP verified successfully.');
+                                setTimeout(function() {
+                                    window.location.href = '/api/token/';  
+                                }, 5000);  // Redirect after 5 seconds
+                            </script>
+                        </head>
+                        <body>
+                        </body>
+                        </html>
+                    """)
+
+        except User.DoesNotExist:
+                return Response({"message": "Invalid OTP"}, status=status.HTTP_404_NOT_FOUND)

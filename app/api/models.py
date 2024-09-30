@@ -16,6 +16,8 @@ class User(AbstractUser):
     address = models.TextField(null=True, blank=True)
     groups = models.ManyToManyField(Group, related_name='custom_user_groups')
     user_permissions = models.ManyToManyField(Permission, related_name='custom_user_permissions')
+    otp = models.CharField(max_length=6, blank=True, null=True)
+    is_email_verified = models.BooleanField(default=False)  # Set default to False
 
 
     def __str__(self):
