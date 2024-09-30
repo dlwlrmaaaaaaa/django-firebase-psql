@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import MyTokenObtainPairView, SomeView, CitizenRegitsration, DepartmentRegistration, WorkerRegistration, ReportView
+from .views import MyTokenObtainPairView, SomeView, CitizenRegitsration, DepartmentRegistration, WorkerRegistration, ReportView, OTPVerificationView
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -13,5 +13,8 @@ urlpatterns = [
     path('worker/registration/', WorkerRegistration.as_view(), name='worker_registration'),
 
     ### For reports
-    path('create-report/', ReportView.as_view(), name='create-report')
+    path('create-report/', ReportView.as_view(), name='create-report'),
+
+
+    path('otp/verify/', OTPVerificationView.as_view(), name='verify')
 ]

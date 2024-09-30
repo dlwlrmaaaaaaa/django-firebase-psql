@@ -27,6 +27,17 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# EMAIL VERIFICATION
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Replace with your email host
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'mikhaelacutie08@gmail.com'
+EMAIL_HOST_PASSWORD = 'zcsy urhi seho hftr'
+DEFAULT_FROM_EMAIL = 'mikhaelacutie08@gmail.com'
+
+
 
 # Application definition
 
@@ -104,7 +115,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'backend',
         'USER': 'postgres',
-        'PASSWORD': '0713',
+        'PASSWORD': 'mikha',
         'HOST': 'localhost',
         'PORT': '5432'
     }
