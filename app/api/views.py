@@ -22,6 +22,9 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 
+User = get_user_model()
+
+
 class AssignRoleView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsSuperAdmin]  # Only super admins can assign roles
 
