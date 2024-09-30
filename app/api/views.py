@@ -18,10 +18,10 @@ from django.http import HttpResponse
 import random
 from django.conf import settings
 
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-
+from rest_framework.exceptions import PermissionDenied
 User = get_user_model()
 
 
@@ -84,9 +84,37 @@ class WorkerRegistration(generics.CreateAPIView):
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
+    
+
 class ReportView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsCitizen]
     serializer_class = AddReportSerializer
+
+class DeleteReportView(generics.DestroyAPIView):
+    query_set = Report.objects.all()
+    permission_class = [IsAuthenticated, IsCitizen, IsSuperAdmin]
+
+    def get_object(self):
+        report_id = self.kwargs.get('report_id')
+        return get_object_or_404(Report, report_id=report_id)
+    
+    def delete(self, request, *args, **kwargs):
+        report = self.get_object()
+
+        # SuperAdmin role can delete any report
+        if report.user_id != request.user:
+            return Response({"error": "You are not authorized to delete this report."}, status=status.HTTP_403_FORBIDDEN)
+        
+        if request.user.role.lower() == 'super_admin' or 'superadmin':
+            report.delete()
+            return Response({"message": "Report deleted successfully."}, status=status.HTTP_200_OK)
+        
+        if request.user.role.lower() == 'citizen':
+            report.delete()
+            return Response({"message": "Your report has been deleted successfully."}, status=status.HTTP_200_OK)
+
+        raise PermissionDenied({"error": "You do not have permission to delete this report."})
+
 
 class UpdateReportView(generics.UpdateAPIView):
     queryset = Report.objects.all()
@@ -119,8 +147,7 @@ class OTPVerificationView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = OTPVerificationSerializer  # Use the updated serializer
 
-    def get(self, request, *args, **kwargs):
-        # Return a message when the verification page is accessed
+    def get(self, request, *args, **kwargs):    
         return Response({
             "message": "An email containing the OTP has been sent to your email address."
         }, status=status.HTTP_200_OK)
@@ -130,30 +157,22 @@ class OTPVerificationView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)  # Validate incoming data
         
         otp_input = serializer.validated_data['otp']  # Extract the OTP
-
+        email = serializer.validated_data['email']
+    
         try:
             # Fetch the user based on the OTP
-            user = User.objects.get(otp=otp_input)  
-            
+            user = User.objects.get(email=email)  
+
+            if user.is_email_verified:
+                return Response({"message": "Email already verified."}, status=status.HTTP_400_BAD_REQUEST)
+
             if user.otp == otp_input:  # Compare the input OTP with the stored one
                     user.otp = None  # Clear the OTP after verification
                     user.is_email_verified = True  # Set is_email_verified to True
                     user.save()  # Save changes to the database
                     
-                    return HttpResponse(""" 
-                        <html>
-                        <head>
-                            <script>
-                                alert('OTP verified successfully.');
-                                setTimeout(function() {
-                                    window.location.href = '/api/token/';  
-                                }, 5000);  // Redirect after 5 seconds
-                            </script>
-                        </head>
-                        <body>
-                        </body>
-                        </html>
-                    """)
-
+                    return Response({"message": "Your Email has been verified."}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
         except User.DoesNotExist:
                 return Response({"message": "Invalid OTP"}, status=status.HTTP_404_NOT_FOUND)

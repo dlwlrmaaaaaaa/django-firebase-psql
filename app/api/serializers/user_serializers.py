@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -7,6 +8,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from ..utils import get_account_type
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
+from rest_framework import status
 
 User = get_user_model()
 
@@ -139,7 +141,8 @@ class WorkerSerializers(serializers.ModelSerializer):
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
-
+        if not self.user.is_email_verified:
+            raise ValidationError({"detail": "Email not verified. Please verify your email."}, code=status.HTTP_403_FORBIDDEN) 
         # Get the user account type
         account_type = get_account_type(self.user)
         print("Username:", self.user.username)
