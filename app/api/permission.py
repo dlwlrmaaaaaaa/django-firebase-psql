@@ -21,4 +21,4 @@ class IsWorker(permissions.BasePermission):
 
 class IsCitizen(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.role == 'citizen'
+        return request.user.role == 'citizen' and request.user.is_email_verified

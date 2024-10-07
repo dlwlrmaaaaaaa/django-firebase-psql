@@ -46,27 +46,28 @@ class AssignRoleView(generics.CreateAPIView):
 class CitizenRegitsration(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = CitizenSerializer
-
+    
     def create(self, request, *args, **kwargs):
+        print("Request data:", request.data)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Send OTP after successful registration
-        otp = random.randint(100000, 999999)  # Generate a random 6-digit OTP
+        otp = random.randint(100000, 999999)  
 
-        user.otp = str(otp)  # Store as string to preserve leading zeros
+        user.otp = str(otp) 
         user.save()
 
-        self.send_verification_email(user.email, otp)
+        try:
+            self.send_verification_email(user.email, otp)
+        except Exception as e:
+            return Response({"error": "Failed to send verification email"}, status=500)
 
-        return redirect('verify')  # Redirect to verification page
-        
-        
+        return redirect('verify')
     
     def send_verification_email(self, email, otp):
         subject = "Verify your email"
-        message = f"Your OTP is: {otp} gago ka hahaha"  # Message to be sent
+        message = f"Your OTP is: {otp} "  # Message to be sent
         from_email = settings.DEFAULT_FROM_EMAIL
         recipient_list = [email]
         send_mail(subject, message, from_email, recipient_list)
