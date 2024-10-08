@@ -115,7 +115,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'backend',
         'USER': 'postgres',
-        'PASSWORD': '0713',
+        'PASSWORD': '1804',
         'HOST': 'localhost',
         'PORT': '5432'
     }
@@ -167,5 +167,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.1.191:8081",  
     "http://192.168.1.191:8000",  
     "http://10.0.0.2:8081",  
-    "http://10.0.0.2:8000"
+    "http://10.0.0.2:8000",
+    "http://192.168.1.11:8081"
 ]
