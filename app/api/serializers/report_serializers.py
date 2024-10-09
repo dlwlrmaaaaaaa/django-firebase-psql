@@ -28,19 +28,7 @@ class AddReportSerializer(serializers.ModelSerializer):
             image_path_string = ''
             
             # Prepare the basic report data
-            report_data = {
-                'report_id': str(report_uuid),
-                'user_id': user.id,                   
-                'type_of_report': validated_data['type_of_report'],
-                'report_description': validated_data['report_description'],
-                'category': validated_data['category'],
-                'longitude': validated_data['longitude'],
-                'latitude': validated_data['latitude'],
-                'upvote': 0,
-                'downvote': 0,
-                'status': "Pending",
-                'report_date': datetime.now().isoformat()
-            }
+            
 
             # Check for the image_path (base64 string)
             if 'image_path' in validated_data and validated_data['image_path']:
@@ -69,7 +57,21 @@ class AddReportSerializer(serializers.ModelSerializer):
                 # Add the image URL to report data
                 image_path_string = image_blob.public_url
                 print(image_blob.public_url)
-            
+
+            report_data = {
+                'report_id': str(report_uuid),
+                'user_id': user.id,                   
+                'type_of_report': validated_data['type_of_report'],
+                'report_description': validated_data['report_description'],
+                'category': validated_data['category'],
+                'longitude': validated_data['longitude'],
+                'latitude': validated_data['latitude'],
+                'upvote': 0,
+                'downvote': 0,
+                'status': "Pending",
+                'report_date': datetime.now().isoformat(),
+                'image_path': image_path_string,
+            }
             # Add the report to Firestore
             db.collection('reports').add(report_data)
 
