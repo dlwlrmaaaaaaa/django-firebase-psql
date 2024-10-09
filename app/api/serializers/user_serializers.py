@@ -9,33 +9,60 @@ from ..utils import get_account_type
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import status
+import ipaddress
+from django.conf import settings
+from django.contrib.auth import authenticate
 
 User = get_user_model()
 
 class CitizenSerializer(serializers.ModelSerializer):
+
+    username = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        validators=[UniqueValidator(queryset=User.objects.all(), message="This username is already taken.")]
+    )
     email = serializers.EmailField(
         required=True,
-        validators=[UniqueValidator(queryset=User.objects.all())]
+        allow_blank=False,
+         validators=[UniqueValidator(queryset=User.objects.all(), message="This email is already registered.")]
     )
     password = serializers.CharField(
         write_only=True, 
         required=True, 
         validators=[validate_password], 
-        style={'input_type': 'password'}
+        style={'input_type': 'password'},
+        error_messages={'required': 'Password is required.'}
     )
     password_confirm = serializers.CharField(
         write_only=True, 
         required=True, 
-        style={'input_type': 'password'}
+        style={'input_type': 'password'},
+        error_messages={'required': 'Password confirmation is required.'}
     )
+    contact_number = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        validators=[UniqueValidator(queryset=User.objects.all(), message="This contact number is already in use.")]
+    )
+    
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address']
+        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'ipv']
     
-        def validate(self, attrs):
-            if attrs['password'] != attrs['password_confirm']:
-                raise serializers.ValidationError({'password': 'Password fields did not match.'})
-            return attrs
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError({'password': 'Password fields did not match.'})
+        for field in ['username', 'email', 'password', 'contact_number']:
+            if not attrs.get(field):  # Validate non-empty values
+                raise serializers.ValidationError({field: f"{field.capitalize()} cannot be empty."})
+        return attrs
+    def validate_ipv(self, value):
+        try:
+            ipaddress.ip_address(value)
+        except ValueError:
+            raise ValidationError("Invalid IP address format.")
+        return value
     
     def create(self, validated_data):
         user = User(
@@ -44,6 +71,7 @@ class CitizenSerializer(serializers.ModelSerializer):
             role='citizen', 
             contact_number=validated_data.get('contact_number'),
             address=validated_data.get('address'),
+            ipv=validated_data.get('ipv')
         )
         user.set_password(validated_data['password'])
         user.save()
@@ -68,7 +96,7 @@ class DepartmentAdminSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'department', 'contact_number']
+        fields = ['username', 'email', 'password', 'password_confirm', 'department', 'contact_number', 'ipv']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -140,20 +168,26 @@ class WorkerSerializers(serializers.ModelSerializer):
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        data = super().validate(attrs)
-        if not self.user.is_email_verified:
-            raise ValidationError({"detail": "Email not verified. Please verify your email."}, code=status.HTTP_403_FORBIDDEN) 
-        # Get the user account type
-        account_type = get_account_type(self.user)
-        print("Username:", self.user.username)
-        print("Email:", self.user.email)
-        print("Contact Number:", self.user.contact_number)
-        print("Contact Number:", self.user.address)
+        username_or_email = attrs.get('username')  
+        password = attrs.get('password') 
+        user = authenticate(request=self.context.get('request'), username=username_or_email, password=password)
 
-        data['username'] = self.user.username  # Add username
-        data['email'] = self.user.email
-        data['address'] = self.user.address
+        if not user:
+            raise ValidationError({"detail": "Invalid credentials. Please try again."}, code=status.HTTP_401_UNAUTHORIZED)
+
+        if not user.is_active:
+            raise ValidationError({"detail": "User account is disabled."}, code=status.HTTP_403_FORBIDDEN)
+
+        self.user = user
+
+        data = super().validate(attrs)
+
+        account_type = get_account_type(self.user)
+        data['username'] = self.user.username  
+        data['email'] = self.user.email 
+        data['address'] = self.user.address 
         data['contact_number'] = self.user.contact_number
-        data['account_type'] = account_type
+        data['account_type'] = account_type 
+        data['is_email_verified'] = self.user.is_email_verified 
 
         return data
