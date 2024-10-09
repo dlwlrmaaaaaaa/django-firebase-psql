@@ -7,7 +7,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from app.firebase import db
 import uuid
-
+import base64
 
 
 class AddReportSerializer(serializers.ModelSerializer):
@@ -21,60 +21,80 @@ class AddReportSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Image path must be a valid string.")
             return value
     def create(self, validated_data):
-        user = self.context['request'].user
-        report_uuid = uuid.uuid4()
-        report_data = {
-                    'report_id': str(report_uuid),
-                    'user_id': user.id,                   
-                    'type_of_report': validated_data['type_of_report'],
-                    'report_description': validated_data['report_description'],
-                    'category': validated_data['category'],
-                    'longitude': validated_data['longitude'],
-                    'latitude': validated_data['latitude'],
-                    'upvote': 0,
-                    'status': "Pending",
-                    'report_date': datetime.now().isoformat()
-                }
-        request = self.context['request']
-        if 'image' in request.FILES:
-                    image_file = request.FILES['image']
-                    image_name = str(uuid.uuid4())  # Generate unique image name
+        try:
+            # Get the current user and generate a report UUID
+            user = self.context['request'].user
+            report_uuid = uuid.uuid4()
+            image_path_string = ''
+            
+            # Prepare the basic report data
+            report_data = {
+                'report_id': str(report_uuid),
+                'user_id': user.id,                   
+                'type_of_report': validated_data['type_of_report'],
+                'report_description': validated_data['report_description'],
+                'category': validated_data['category'],
+                'longitude': validated_data['longitude'],
+                'latitude': validated_data['latitude'],
+                'upvote': 0,
+                'downvote': 0,
+                'status': "Pending",
+                'report_date': datetime.now().isoformat()
+            }
 
-                    # Save the image to a temporary path
-                    temp_image_path = default_storage.save(f'temporary_path/{image_name}', ContentFile(image_file.read()))
+            # Check for the image_path (base64 string)
+            if 'image_path' in validated_data and validated_data['image_path']:
+                # Extract base64 data from the image_path
+                image_data = validated_data['image_path']
+                image_format, imgstr = image_data.split(';base64,')  # Splitting the format
+                ext = image_format.split('/')[-1]  # Getting the file extension
+                image_name = str(uuid.uuid4())  # Generate unique image name
 
-                    # Get a reference to the Firebase storage bucket
-                    bucket = storage.bucket()
+                # Decode base64 data and create ContentFile for the image
+                image_file = ContentFile(base64.b64decode(imgstr), name=f"{image_name}.{ext}")
+                
+                # Save the image to a temporary path
+                temp_image_path = default_storage.save(f'temporary_path/{image_name}.{ext}', image_file)
 
-                    # Create a blob and upload the file to Firebase
-                    image_blob = bucket.blob(f'images_report/{image_name}')
-                    image_blob.upload_from_filename(temp_image_path, content_type=image_file.content_type)
+                # Get a reference to the Firebase storage bucket
+                bucket = storage.bucket()
 
-                    # Make the image publicly accessible
-                    image_blob.make_public()
+                # Create a blob and upload the file to Firebase
+                image_blob = bucket.blob(f'images_report/{image_name}.{ext}')
+                image_blob.upload_from_filename(temp_image_path, content_type=f'image/{ext}')
 
-                    # Add the image URL to report data
-                    image_path_string = image_blob.public_url
+                # Make the image publicly accessible
+                image_blob.make_public()
 
-         # Add the report to Firestore
-        db.collection('reports').add(report_data)
+                # Add the image URL to report data
+                image_path_string = image_blob.public_url
+                print(image_blob.public_url)
+            
+            # Add the report to Firestore
+            db.collection('reports').add(report_data)
+
+            # Save the report in the database
+            report = Report(
+                report_id=report_uuid,
+                user_id=user.id,
+                image_path=image_path_string,
+                type_of_report=validated_data['type_of_report'],
+                report_description=validated_data['report_description'],
+                category=validated_data['category'],
+                longitude=validated_data['longitude'],
+                latitude=validated_data['latitude'],
+                upvote=0,
+                downvote=0,
+                status="Pending",
+                report_date=datetime.now()
+            )
+            report.save()
+
+            return report
         
-        # Save the report in the database // this not include the firebase
-        report = Report(
-            report_id=report_uuid,
-            user_id=user.id,
-            image_path=image_path_string,
-            type_of_report=validated_data['type_of_report'],
-            report_description=validated_data['report_description'],
-            category=validated_data['category'],
-            longitude=validated_data['longitude'],
-            latitude=validated_data['latitude'],
-            upvote=0,
-            status="Pending",
-            report_date=datetime.now()
-        )
-        report.save()
-        return report
+        except Exception as e:
+            print(f'An exception occurred: {e}')
+            raise serializers.ValidationError({"detail": "Failed to create the report due to an internal error."})
     
 
 class UpdateReportSerializer(serializers.ModelSerializer):
@@ -92,9 +112,7 @@ class UpdateReportSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("You are not authorized to update this report.")
 
 
-
      
-
 
 
              

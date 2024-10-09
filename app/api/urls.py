@@ -23,4 +23,5 @@ urlpatterns = [
     path('reports/<int:report_id>/update/', UpdateReportView.as_view(), name='update-report'),
     path('reports/<uuid:report_id>/delete/', DeleteReportView.as_view(), name='update-report'),
 
+
 ]

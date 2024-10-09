@@ -27,6 +27,7 @@ class User(AbstractUser):
 class Report(models.Model):
     CATEGORY_CHOICES = [
         ('emergency', 'Emergency'),
+        ('not emergency', 'Not Emergency'),
         ('maintenance', 'Maintenance'),
     ]
     report_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -40,6 +41,7 @@ class Report(models.Model):
     latitude = models.FloatField(null=True)
     longitude = models.FloatField(null=True)
     upvote = models.IntegerField(default=0)
+    downvote = models.IntegerField(default=0)
     report_date = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=50, default="Pending")
 

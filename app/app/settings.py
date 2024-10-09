@@ -174,3 +174,5 @@ AUTHENTICATION_BACKENDS = [
     'api.authentication.login_authentication.UsernameOrEmail', 
     'django.contrib.auth.backends.ModelBackend', 
 ]
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880 
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760;
