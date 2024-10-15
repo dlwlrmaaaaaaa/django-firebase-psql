@@ -115,7 +115,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'backend',
         'USER': 'postgres',
-        'PASSWORD': '0713',
+        'PASSWORD': '1804',
         'HOST': 'localhost',
         'PORT': '5432'
     }
@@ -165,14 +165,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     'http://192.168.1.191:8081',
     'http://192.168.1.191:8000',
+    "http://192.168.1.11:8081",
 ]
 CORS_ORIGIN_WHITELIST = [
-    'http://192.168.1.191:8081', 
+    'http://192.168.1.191:8081',
+    "http://192.168.1.11:8081",
 ]
 
 AUTHENTICATION_BACKENDS = [
     'api.authentication.login_authentication.UsernameOrEmail', 
     'django.contrib.auth.backends.ModelBackend', 
 ]
-DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880 
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760;
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760   
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760
