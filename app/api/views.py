@@ -80,7 +80,8 @@ class CitizenRegitsration(generics.CreateAPIView):
         )
         from_email = settings.DEFAULT_FROM_EMAIL
         recipient_list = [email]
-        send_mail(subject, message, from_email, recipient_list)
+
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
     
     
 class DepartmentRegistration(generics.CreateAPIView):
