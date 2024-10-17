@@ -51,11 +51,12 @@ class CitizenSerializer(serializers.ModelSerializer):
         fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'ipv']
     
     def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({'password': 'Password fields did not match.'})
-        for field in ['username', 'email', 'password', 'contact_number']:
-            if not attrs.get(field):  # Validate non-empty values
-                raise serializers.ValidationError({field: f"{field.capitalize()} cannot be empty."})
+        if 'password' in attrs and 'password_confirm' in attrs:
+            if attrs['password'] != attrs['password_confirm']:
+                raise serializers.ValidationError({'password': 'Password fields did not match.'})
+            for field in ['username', 'email', 'contact_number']:
+                if not attrs.get(field):  # Validate non-empty values
+                    raise serializers.ValidationError({field: f"{field.capitalize()} cannot be empty."})
         return attrs
     def validate_ipv(self, value):
         try:
@@ -76,6 +77,19 @@ class CitizenSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+    
+    def update(self, instance, validated_data):
+        # If password is provided, update it
+        password = validated_data.pop('password', None)
+        password_confirm = validated_data.pop('password_confirm', None)
+
+        if password and password_confirm:
+            if password != password_confirm:
+                raise serializers.ValidationError({"password": "Passwords must match."})
+            instance.set_password(password)
+        
+        # Update the rest of the fields
+        return super().update(instance, validated_data)
 
 class DepartmentAdminSerializer(serializers.ModelSerializer):
 
@@ -191,3 +205,31 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['is_email_verified'] = self.user.is_email_verified 
 
         return data
+    
+class VerifyPasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(required=True, write_only=True)
+
+    def validate_password(self, value):
+        # You can add additional validation if needed
+        return value
+    
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(
+        required=True, 
+        write_only=True, 
+        validators=[validate_password]
+    )
+    new_password_confirm = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, attrs):
+        # Check if the new passwords match
+        if attrs['new_password'] != attrs['new_password_confirm']:
+            raise serializers.ValidationError({"new_password": "New password fields did not match."})
+
+        # Validate the current password
+        user = self.context['request'].user
+        if not user.check_password(attrs['current_password']):
+            raise serializers.ValidationError({"current_password": "Current password is incorrect."})
+
+        return attrs

@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated 
 from rest_framework import status
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
-from .serializers.user_serializers import CitizenSerializer, DepartmentAdminSerializer
+from .serializers.user_serializers import CitizenSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .models import Report
 from .serializers.otp_serializer import OTPVerificationSerializer
@@ -67,10 +67,21 @@ class CitizenRegitsration(generics.CreateAPIView):
     
     def send_verification_email(self, email, otp):
         subject = "Verify your email"
-        message = f"Your OTP is: {otp} "  # Message to be sent
+        message = (
+            f"<html>"
+            f"<body>"
+            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
+            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
+            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
+            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
+            f"</body>"
+            f"</html>"
+        )
         from_email = settings.DEFAULT_FROM_EMAIL
         recipient_list = [email]
-        send_mail(subject, message, from_email, recipient_list)
+
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
     
     
 class DepartmentRegistration(generics.CreateAPIView):
@@ -86,7 +97,6 @@ class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
     
-
 class ReportView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsCitizen]
     serializer_class = AddReportSerializer
@@ -177,3 +187,49 @@ class OTPVerificationView(generics.GenericAPIView):
                 return Response({"message": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
         except User.DoesNotExist:
                 return Response({"message": "Invalid OTP"}, status=status.HTTP_404_NOT_FOUND)
+        
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CitizenSerializer  # Use the same serializer you use for registration or create a new one
+
+    def get_object(self):
+        return self.request.user  # Retrieve the authenticated user
+
+    def update(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data, partial=True)  # partial=True allows partial updates (e.g. only updating email)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class VerifyPasswordView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = VerifyPasswordSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        password = serializer.validated_data['password']
+        user = request.user
+
+        if user.check_password(password):
+            return Response({"valid": True}, status=status.HTTP_200_OK)
+        else:
+            return Response({"valid": False}, status=status.HTTP_400_BAD_REQUEST)
+        
+class ChangePasswordView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
+
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+
+        return Response({"message": "Password changed successfully."}, status=status.HTTP_200_OK)
