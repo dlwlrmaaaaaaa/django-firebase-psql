@@ -12,6 +12,8 @@ from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
 from .serializers.user_serializers import CitizenSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .models import Report
+from .models import VerifyAccount
+from .serializers.verifyAcc_serializer import VerifyAccountSerializer
 from .serializers.otp_serializer import OTPVerificationSerializer
 from django.core.mail import send_mail
 from django.http import HttpResponse
@@ -80,7 +82,8 @@ class CitizenRegitsration(generics.CreateAPIView):
         )
         from_email = settings.DEFAULT_FROM_EMAIL
         recipient_list = [email]
-        send_mail(subject, message, from_email, recipient_list)
+
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
     
     
 class DepartmentRegistration(generics.CreateAPIView):
@@ -232,3 +235,20 @@ class ChangePasswordView(generics.UpdateAPIView):
         user.save()
 
         return Response({"message": "Password changed successfully."}, status=status.HTTP_200_OK)
+    
+class VerifyAccountView(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated]  # Allow only authenticated users
+    serializer_class = VerifyAccountSerializer
+
+    def create(self, request, *args, **kwargs):
+        # Initialize the serializer with request data
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)  # Validate the incoming data
+
+        # Save the new VerifyAccount instance
+        verify_account = serializer.save()
+        
+        return Response({
+            "message": "Verification account created successfully.",
+            "data": VerifyAccountSerializer(verify_account).data
+        }, status=status.HTTP_201_CREATED)
