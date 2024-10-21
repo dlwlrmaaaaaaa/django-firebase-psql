@@ -60,7 +60,7 @@ class AddReportSerializer(serializers.ModelSerializer):
 
             report_data = {
                 'report_id': str(report_uuid),
-                'user_id': user.id,                   
+                'username': user.username,                   
                 'type_of_report': validated_data['type_of_report'],
                 'report_description': validated_data['report_description'],
                 'category': validated_data['category'],
@@ -79,6 +79,7 @@ class AddReportSerializer(serializers.ModelSerializer):
             report = Report(
                 report_id=report_uuid,
                 user_id=user.id,
+                username=user.username,
                 image_path=image_path_string,
                 type_of_report=validated_data['type_of_report'],
                 report_description=validated_data['report_description'],
