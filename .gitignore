@@ -1,2 +1,9 @@
 env/
 venv/
+app/api/models/
+app/api/__pycache__/
+app/app/__pycache__/
+*.pyc
+*.pyo
+app/firebase.py/
+app/settings.py/

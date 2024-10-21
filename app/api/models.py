@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser, Group, Permission
 import uuid
 
 class User(AbstractUser):
+    # id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     ROLE_CHOICES = [
         ('citizen', 'Citizen'),
         ('worker', 'Worker'),
@@ -19,6 +21,17 @@ class User(AbstractUser):
     otp = models.CharField(max_length=6, blank=True, null=True)
     is_email_verified = models.BooleanField(default=False)  # Set default to False
     ipv = models.CharField(max_length=20, unique=True, null=True)
+    # first_name = models.CharField(max_length=100, null=True, blank=True)
+    # middle_name = models.CharField(max_length=100, null=True, blank=True)
+    # last_name = models.CharField(max_length=100, null=True, blank=True)
+    # text_address = models.CharField(max_length=255, null=True, blank=True)
+    # birthday = models.DateField(null=True, blank=True)
+    # id_number = models.CharField(max_length=100, null=True, blank=True)
+    # is_account_verified = models.BooleanField(default=False)
+    # phofile_image_path = models.CharField(max_length=255, null=True, blank=True)
+    # photo_image_path = models.CharField(max_length=255, null=True, blank=True)
+    # id_selfie_image_path = models.CharField(max_length=255, null=True, blank=True)
+    # id_picture_image_path = models.CharField(max_length=255, null=True, blank=True)
 
 
     def __str__(self):
@@ -60,3 +73,17 @@ class Feedback(models.Model):
     comment = models.TextField()
     rating = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+class VerifyAccount(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='verification')
+    first_name = models.CharField(max_length=100, null=True, blank=True)
+    middle_name = models.CharField(max_length=100, null=True, blank=True)
+    last_name = models.CharField(max_length=100, null=True, blank=True)
+    text_address = models.CharField(max_length=255, null=True, blank=True)
+    birthday = models.DateField(null=True, blank=True)
+    id_number = models.CharField(max_length=100, null=True, blank=True)
+    is_account_verified = models.BooleanField(default=False)
+    profile_image_path = models.CharField(max_length=255, null=True, blank=True)
+    photo_image_path = models.CharField(max_length=255, null=True, blank=True)
+    id_selfie_image_path = models.CharField(max_length=255, null=True, blank=True)
+    id_picture_image_path = models.CharField(max_length=255, null=True, blank=True)
