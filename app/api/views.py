@@ -52,18 +52,23 @@ class CitizenRegitsration(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         print("Request data:", request.data)
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-
-        otp = random.randint(100000, 999999)  
-
-        user.otp = str(otp) 
-        user.save()
-
+        # Check if the serializer is valid
+        # Check if the serializer is valid
+        if not serializer.is_valid():
+            print("Validation errors:", serializer.errors)  # Log the errors
+            return Response(serializer.errors, status=400)
         try:
+            user = serializer.save()
+
+            otp = random.randint(100000, 999999)
+            user.otp = str(otp)
+            user.save()
+
             self.send_verification_email(user.email, otp)
+
         except Exception as e:
-            return Response({"error": "Failed to send verification email"}, status=500)
+            print("Error during user creation or email sending:", str(e))  # Log the error
+            return Response({"error": "Internal server error", "details": str(e)}, status=500)
 
         return redirect('verify')
     
