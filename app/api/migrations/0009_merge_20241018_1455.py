@@ -6,7 +6,6 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0008_remove_report_category_report_categories'),
         ('api', '0008_verifyaccount'),
     ]
 

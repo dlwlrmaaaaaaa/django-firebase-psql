@@ -50,7 +50,7 @@ class Report(models.Model):
     assigned_by_department = models.CharField(max_length=100)
     type_of_report = models.CharField(max_length=100)
     report_description = models.CharField(max_length=255)
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, null=True)
+    is_emergency = models.CharField(max_length=20, choices=CATEGORY_CHOICES, null=True)
     latitude = models.FloatField(null=True)
     longitude = models.FloatField(null=True)
     upvote = models.IntegerField(default=0)

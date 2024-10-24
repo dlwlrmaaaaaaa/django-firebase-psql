@@ -194,9 +194,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         self.user = user
 
-        data = super().validate(attrs)
+
+      
 
         account_type = get_account_type(self.user)
+
+        # if account_type == 'citizen':
+        #     raise ValidationError({"detail": "Access restricted to admins only."}, code=status.HTTP_403_FORBIDDEN)
+        
+        data = super().validate(attrs)
         data['username'] = self.user.username  
         data['email'] = self.user.email 
         data['address'] = self.user.address 
