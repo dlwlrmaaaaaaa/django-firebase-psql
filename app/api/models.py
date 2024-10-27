@@ -30,17 +30,6 @@ class User(AbstractUser):
     violation = models.IntegerField(default=0)
     is_verified = models.BooleanField(default=False)
     account_status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
-    # first_name = models.CharField(max_length=100, null=True, blank=True)
-    # middle_name = models.CharField(max_length=100, null=True, blank=True)
-    # last_name = models.CharField(max_length=100, null=True, blank=True)
-    # text_address = models.CharField(max_length=255, null=True, blank=True)
-    # birthday = models.DateField(null=True, blank=True)
-    # id_number = models.CharField(max_length=100, null=True, blank=True)
-    # is_account_verified = models.BooleanField(default=False)
-    # phofile_image_path = models.CharField(max_length=255, null=True, blank=True)
-    # photo_image_path = models.CharField(max_length=255, null=True, blank=True)
-    # id_selfie_image_path = models.CharField(max_length=255, null=True, blank=True)
-    # id_picture_image_path = models.CharField(max_length=255, null=True, blank=True)
 
 
     def __str__(self):
