@@ -201,11 +201,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         
         data = super().validate(attrs)
         data['username'] = self.user.username  
+        data['user_id'] = self.user.id 
         data['email'] = self.user.email 
         data['address'] = self.user.address 
         data['contact_number'] = self.user.contact_number
         data['account_type'] = account_type 
         data['is_email_verified'] = self.user.is_email_verified 
+        data['is_verified'] = self.user.is_verified 
 
         return data
     
@@ -243,7 +245,7 @@ class UsersSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         # fields = ['full_name', 'contact_number', 'is_email_verified', 'role', 'is_active', 'is_verified']
-        fields = ['full_name', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email']
+    fields = ['full_name', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email']
 
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}"
