@@ -1,6 +1,6 @@
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.models import User
-from rest_framework import generics
+from rest_framework import generics, viewsets
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers.user_serializers import CustomTokenObtainPairSerializer
@@ -8,8 +8,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated 
 from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
-from .serializers.user_serializers import CitizenSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer
+from .serializers.user_serializers import CitizenSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .models import Report
 from .models import VerifyAccount
@@ -211,6 +213,16 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+# class UserProfileViewSet(viewsets.ModelViewSet):
+#     parser_classes = [MultiPartParser]
+    
+#     @action(detail=True, methods=['post'])
+#     def upload_profile_image(self, request, pk=None):
+#         user = self.get_object()
+#         user.profile_image_path = request.FILES.get('profile_image')
+#         user.save()
+#         return Response({'message': 'Profile image updated successfully', 'profile_image_path': user.profile_image_path.url})
+    
 class VerifyPasswordView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = VerifyPasswordSerializer
@@ -257,3 +269,33 @@ class VerifyAccountView(generics.CreateAPIView):
             "message": "Verification account created successfully.",
             "data": VerifyAccountSerializer(verify_account).data
         }, status=status.HTTP_201_CREATED)
+    
+class CitizenViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.filter(role='citizen')  # Filter for citizens
+    serializer_class = CitizenSerializer
+    permission_classes = [IsAuthenticated]
+    # permission_classes = [AllowAny]
+
+class DepartmentHeadViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.filter(role='department head')  # Filter for department heads
+    serializer_class = DepartmentAdminSerializer
+    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+
+class WorkerViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.filter(role='worker')  # Filter for workers
+    serializer_class = WorkerSerializers
+    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+
+
+class UsersViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = UsersSerializer
+    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+
+        return User.objects.filter(role__in=["citizen", "department head"])
+        # return User.objects.all()
+

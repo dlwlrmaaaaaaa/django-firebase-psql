@@ -11,6 +11,12 @@ class User(AbstractUser):
         ('department_admin', 'Department Admin'),
         ('superadmin', 'Super Admin'),
     ]
+
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('suspended', 'Suspended'),
+        ('blocked', 'Blocked'),
+    ]
     role = models.CharField(max_length=50, choices=ROLE_CHOICES)
     contact_number = models.CharField(max_length=20, unique=True)
     department = models.CharField(max_length=100, null=True, blank=True)
@@ -21,21 +27,18 @@ class User(AbstractUser):
     otp = models.CharField(max_length=6, blank=True, null=True)
     is_email_verified = models.BooleanField(default=False)  # Set default to False
     ipv = models.CharField(max_length=20, unique=True, null=True)
-    # first_name = models.CharField(max_length=100, null=True, blank=True)
-    # middle_name = models.CharField(max_length=100, null=True, blank=True)
-    # last_name = models.CharField(max_length=100, null=True, blank=True)
-    # text_address = models.CharField(max_length=255, null=True, blank=True)
-    # birthday = models.DateField(null=True, blank=True)
-    # id_number = models.CharField(max_length=100, null=True, blank=True)
-    # is_account_verified = models.BooleanField(default=False)
-    # phofile_image_path = models.CharField(max_length=255, null=True, blank=True)
-    # photo_image_path = models.CharField(max_length=255, null=True, blank=True)
-    # id_selfie_image_path = models.CharField(max_length=255, null=True, blank=True)
-    # id_picture_image_path = models.CharField(max_length=255, null=True, blank=True)
+    violation = models.IntegerField(default=0)
+    is_verified = models.BooleanField(default=False)
+    account_status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
+    profile_image_path = models.ImageField(upload_to='profile_images/', blank=True, null=True)
 
 
     def __str__(self):
         return self.username
+    
+
+    
+
 
 class Report(models.Model):
     CATEGORY_CHOICES = [
@@ -57,9 +60,15 @@ class Report(models.Model):
     downvote = models.IntegerField(default=0)
     report_date = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=50, default="Pending")
+    custom_type = models.CharField(max_length=100, null=True)
+    floor_number = models.CharField(max_length=100, null=True)
+    
+
 
     def __str__(self):
         return self.type_of_report
+    
+
 
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

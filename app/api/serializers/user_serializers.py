@@ -49,6 +49,7 @@ class CitizenSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'ipv']
+        # fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'ipv', 'profile_image_path']
     
     def validate(self, attrs):
         if 'password' in attrs and 'password_confirm' in attrs:
@@ -194,21 +195,20 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         self.user = user
 
-
-      
-
         account_type = get_account_type(self.user)
 
         # if account_type == 'citizen':
         #     raise ValidationError({"detail": "Access restricted to admins only."}, code=status.HTTP_403_FORBIDDEN)
         
         data = super().validate(attrs)
+        data['user_id'] = self.user.id
         data['username'] = self.user.username  
         data['email'] = self.user.email 
         data['address'] = self.user.address 
         data['contact_number'] = self.user.contact_number
         data['account_type'] = account_type 
-        data['is_email_verified'] = self.user.is_email_verified 
+        data['is_email_verified'] = self.user.is_email_verified  
+        data['is_verified'] = self.user.is_verified
 
         return data
     
@@ -239,3 +239,14 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError({"current_password": "Current password is incorrect."})
 
         return attrs
+    
+class UsersSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        # fields = ['full_name', 'contact_number', 'is_email_verified', 'role', 'is_active', 'is_verified']
+        fields = ['full_name', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email']
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}"
