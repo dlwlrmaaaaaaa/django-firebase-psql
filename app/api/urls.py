@@ -8,15 +8,19 @@ from .views import (
     MyTokenObtainPairView,
     CitizenViewSet,
     DepartmentHeadViewSet,
-    WorkerViewSet, UsersViewSet
+    WorkersViewSet, UsersViewSet
+    # SuperAdminViewSet
+    
 )
 
 # Create a router and register our viewsets with it.
 router = DefaultRouter()
 router.register(r'citizens', CitizenViewSet, basename='citizen')  # Unique basename
 router.register(r'deptheads', DepartmentHeadViewSet, basename='depthead')  # Unique basename
-router.register(r'workers', WorkerViewSet, basename='worker')  # Unique basename
+router.register(r'workers', WorkersViewSet, basename='worker')  # Unique basename
 router.register(r'users', UsersViewSet, basename='user')  # Unique basename
+# router.register(r'admins', SuperAdminViewSet, basename='admin')  # Unique basename
+
 
 
 urlpatterns = [
