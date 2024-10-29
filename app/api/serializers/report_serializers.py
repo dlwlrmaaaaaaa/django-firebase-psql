@@ -14,7 +14,7 @@ class AddReportSerializer(serializers.ModelSerializer):
     image_path = serializers.CharField(required=False, allow_blank=True)
     class Meta: 
         model = Report
-        fields = ['type_of_report', 'report_description', 'longitude', 'latitude', 'is_emergency', 'image_path']
+        fields = ['type_of_report', 'report_description', 'longitude', 'latitude', 'is_emergency', 'image_path', 'custom_type', 'floor_number']
     
     def validate_image_path(self, value):
             if value and not isinstance(value, str):
@@ -73,6 +73,8 @@ class AddReportSerializer(serializers.ModelSerializer):
                 'status': "Pending",
                 'report_date': datetime.now().isoformat(),
                 'image_path': image_path_string,
+                'custom_type': validated_data['custom_type'],
+                'floor_number': validated_data['floor_number'],
             }
             # Add the report to Firestore
             collection_path = 'reports'
@@ -99,6 +101,8 @@ class AddReportSerializer(serializers.ModelSerializer):
                 upvote=0,
                 downvote=0,
                 status="Pending",
+                custom_type=validated_data['custom_type'],
+                floor_number=validated_data['floor_number'],
                 report_date=datetime.now()
             )
             print(report)

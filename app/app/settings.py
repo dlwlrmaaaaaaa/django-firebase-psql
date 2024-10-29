@@ -35,7 +35,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'mikhaelacutie08@gmail.com'
 EMAIL_HOST_PASSWORD = 'lulc jtkh pmcc zpiy'
-DEFAULT_FROM_EMAIL = 'Mikhaela (gf ni nuque) <mikhaelacutie@gmail.com>'
+DEFAULT_FROM_EMAIL = 'CRISP <crisp@gmail.com>'
 
 
 
@@ -115,7 +115,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'backend',
         'USER': 'postgres',
-        'PASSWORD': 'mikha',
+        'PASSWORD': '1804',
         'HOST': 'localhost',
         'PORT': '5432'
     }
@@ -168,7 +168,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     'http://192.168.1.191:8081',
     'http://192.168.1.191:8000',
-    "http://192.168.1.11:8081",
+    "http://192.168.1.13:8081",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://192.168.1.25:8081",
@@ -176,7 +176,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ORIGIN_WHITELIST = [
     'http://192.168.1.191:8081',
-    "http://192.168.1.11:8081",
+    "http://192.168.1.13:8081",
     "http://192.168.1.25:8081",
 ]
 

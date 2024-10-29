@@ -8,6 +8,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated 
 from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
 from .serializers.user_serializers import CitizenSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
@@ -52,18 +54,23 @@ class CitizenRegitsration(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         print("Request data:", request.data)
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-
-        otp = random.randint(100000, 999999)  
-
-        user.otp = str(otp) 
-        user.save()
-
+        # Check if the serializer is valid
+        # Check if the serializer is valid
+        if not serializer.is_valid():
+            print("Validation errors:", serializer.errors)  # Log the errors
+            return Response(serializer.errors, status=400)
         try:
+            user = serializer.save()
+
+            otp = random.randint(100000, 999999)
+            user.otp = str(otp)
+            user.save()
+
             self.send_verification_email(user.email, otp)
+
         except Exception as e:
-            return Response({"error": "Failed to send verification email"}, status=500)
+            print("Error during user creation or email sending:", str(e))  # Log the error
+            return Response({"error": "Internal server error", "details": str(e)}, status=500)
 
         return redirect('verify')
     
@@ -205,6 +212,16 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+# class UserProfileViewSet(viewsets.ModelViewSet):
+#     parser_classes = [MultiPartParser]
+    
+#     @action(detail=True, methods=['post'])
+#     def upload_profile_image(self, request, pk=None):
+#         user = self.get_object()
+#         user.profile_image_path = request.FILES.get('profile_image')
+#         user.save()
+#         return Response({'message': 'Profile image updated successfully', 'profile_image_path': user.profile_image_path.url})
     
 class VerifyPasswordView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]

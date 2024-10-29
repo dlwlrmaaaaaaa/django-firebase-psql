@@ -49,6 +49,7 @@ class CitizenSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'ipv']
+        # fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'ipv', 'profile_image_path']
     
     def validate(self, attrs):
         if 'password' in attrs and 'password_confirm' in attrs:
@@ -200,6 +201,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         #     raise ValidationError({"detail": "Access restricted to admins only."}, code=status.HTTP_403_FORBIDDEN)
         
         data = super().validate(attrs)
+        data['user_id'] = self.user.id
         data['username'] = self.user.username  
         data['user_id'] = self.user.id 
         data['email'] = self.user.email 

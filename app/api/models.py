@@ -30,6 +30,7 @@ class User(AbstractUser):
     violation = models.IntegerField(default=0)
     is_verified = models.BooleanField(default=False)
     account_status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
+    profile_image_path = models.ImageField(upload_to='profile_images/', blank=True, null=True)
 
 
     def __str__(self):
@@ -59,6 +60,8 @@ class Report(models.Model):
     downvote = models.IntegerField(default=0)
     report_date = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=50, default="Pending")
+    custom_type = models.CharField(max_length=100, null=True)
+    floor_number = models.CharField(max_length=100, null=True)
     
 
 
