@@ -82,7 +82,7 @@ class AddReportSerializer(serializers.ModelSerializer):
             try:
                 doc_ref = db.collection(collection_path).document(document_id)
                 doc_ref.collection('reports').document(str(report_uuid)).set(report_data)
-
+                doc_ref.collection('votes')
                 print(f"Report successfully added to {document_id}/reports/{report_uuid}.")
             except Exception as e:
                 print(f"Error adding report to Firestore: {e}")

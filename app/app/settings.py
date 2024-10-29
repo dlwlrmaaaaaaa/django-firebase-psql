@@ -35,7 +35,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'mikhaelacutie08@gmail.com'
 EMAIL_HOST_PASSWORD = 'lulc jtkh pmcc zpiy'
-DEFAULT_FROM_EMAIL = 'Mikhaela (gf ni nuque) <mikhaelacutie@gmail.com>'
+DEFAULT_FROM_EMAIL = 'CRISP <crisp@gmail.com>'
 
 
 
