@@ -277,13 +277,19 @@ class CitizenViewSet(viewsets.ReadOnlyModelViewSet):
     # permission_classes = [AllowAny]
 
 class DepartmentHeadViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.filter(role='department head')  # Filter for department heads
+    queryset = User.objects.filter(role='department_head')  # Filter for department heads
     serializer_class = DepartmentAdminSerializer
     # permission_classes = [IsAuthenticated]
     permission_classes = [AllowAny]
 
-class WorkerViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.filter(role='worker')  # Filter for workers
+class SuperAdminViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.filter(role='superadmin')  # Filter for Admins
+    serializer_class = WorkerSerializers
+    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+
+class WorkersViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.filter(role='worker')  
     serializer_class = WorkerSerializers
     # permission_classes = [IsAuthenticated]
     permission_classes = [AllowAny]
@@ -296,6 +302,6 @@ class UsersViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
 
-        return User.objects.filter(role__in=["citizen", "department head"])
+        return User.objects.filter(role__in=["citizen", "department head", "worker"])
         # return User.objects.all()
 
