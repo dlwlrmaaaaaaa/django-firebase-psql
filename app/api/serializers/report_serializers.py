@@ -75,6 +75,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 'image_path': image_path_string,
                 'custom_type': validated_data['custom_type'],
                 'floor_number': validated_data['floor_number'],
+                'is_validated': False,
             }
             # Add the report to Firestore
             collection_path = 'reports'
