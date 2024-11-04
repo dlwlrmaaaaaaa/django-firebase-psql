@@ -242,7 +242,8 @@ class ChangePasswordSerializer(serializers.Serializer):
         return attrs
     
 class UsersSerializer(serializers.ModelSerializer):
-    # full_name = serializers.SerializerMethodField()
+    # username = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         # fields = ['full_name', 'contact_number', 'is_email_verified', 'role', 'is_active', 'is_verified']
