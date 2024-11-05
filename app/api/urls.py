@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import MyTokenObtainPairView, SomeView, CitizenRegitsration, DeleteReportView, DepartmentRegistration, WorkerRegistration, ReportView, OTPVerificationView, UpdateReportView, UserProfileView, VerifyPasswordView, ChangePasswordView, VerifyAccountView
+from .views import MyTokenObtainPairView, SomeView, MyRefreshTokenPair, CitizenRegitsration, DeleteReportView, DepartmentRegistration, WorkerRegistration, ReportView, OTPVerificationView, UpdateReportView, UserProfileView, VerifyPasswordView, ChangePasswordView, VerifyAccountView
 from rest_framework.routers import DefaultRouter
 
 
@@ -25,7 +25,7 @@ router.register(r'users', UsersViewSet, basename='user')  # Unique basename
 
 urlpatterns = [
     path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'), ## This is login and generated token
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), ## this is refresh token where you will get another access token
+    path('token/refresh/', MyRefreshTokenPair.as_view(), name='token_refresh'), ## this is refresh token where you will get another access token
     path('superadmin-only/', SomeView.as_view(), name='protected_superadmin'),## this is for test auth
 
     ### This is for Registration
