@@ -2,8 +2,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.models import User
 from rest_framework import generics, viewsets
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers.user_serializers import CustomTokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from .serializers.user_serializers import CustomTokenObtainPairSerializer, CustomTokenRefreshSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated 
@@ -105,6 +105,8 @@ class WorkerRegistration(generics.CreateAPIView):
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
+class MyRefreshTokenPair(TokenRefreshView):
+    serializer_class = CustomTokenRefreshSerializer
     
 class ReportView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsCitizen]

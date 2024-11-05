@@ -2,7 +2,9 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import Token
 from rest_framework_simplejwt.views import TokenObtainPairView
 from ..utils import get_account_type
@@ -213,6 +215,30 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         return data
     
+class CustomTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+ 
+        refresh_token = attrs['refresh']
+        token = RefreshToken(refresh_token)
+        user_id = token['user_id']
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise ValidationError({"detail": "User not found."})
+        
+        data['user_id'] = user.id
+        data['username'] = user.username
+        data['email'] = user.email
+        data['address'] = user.address
+        data['contact_number'] = user.contact_number
+        data['account_type'] = get_account_type(user)
+        data['is_email_verified'] = user.is_email_verified
+        data['is_verified'] = user.is_verified
+        
+        return data
+
+
 class VerifyPasswordSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, write_only=True)
 

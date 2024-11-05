@@ -5,5 +5,7 @@ app/api/__pycache__/
 app/app/__pycache__/
 *.pyc
 *.pyo
-app/firebase.py/
 app/settings.py/
+app/app/firebase.py
+
+/app/temporary_path
