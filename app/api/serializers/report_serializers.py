@@ -76,6 +76,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 'custom_type': validated_data['custom_type'],
                 'floor_number': validated_data['floor_number'],
                 'is_validated': False,
+                'update_date': datetime.now().isoformat(),
             }
             # Add the report to Firestore
             collection_path = 'reports'
