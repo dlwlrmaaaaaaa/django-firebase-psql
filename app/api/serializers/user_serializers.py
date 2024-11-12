@@ -171,7 +171,7 @@ class WorkerSerializers(serializers.ModelSerializer):
             department=validated_data.get('department'),
             supervisor=supervisor,
             contact_number=validated_data.get('contact_number'),
-            role='department_admin'
+            role='worker'
         )
         user.set_password(validated_data['password'])
         user.save()

@@ -8,7 +8,7 @@ class User(AbstractUser):
     ROLE_CHOICES = [
         ('citizen', 'Citizen'),
         ('worker', 'Worker'),
-        ('department admin', 'Department Admin'),
+        ('department_admin', 'Department Admin'),
         ('superadmin', 'Super Admin'),
     ]
 
