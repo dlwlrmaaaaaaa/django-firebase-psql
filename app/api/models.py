@@ -8,7 +8,8 @@ class User(AbstractUser):
     ROLE_CHOICES = [
         ('citizen', 'Citizen'),
         ('worker', 'Worker'),
-        ('department admin', 'Department Admin'),
+        ('department_admin', 'Department Admin'),
+        ('department_head', 'Department Head'),
         ('superadmin', 'Super Admin'),
     ]
 
@@ -17,6 +18,8 @@ class User(AbstractUser):
         ('suspended', 'Suspended'),
         ('blocked', 'Blocked'),
     ]
+    
+
     role = models.CharField(max_length=50, choices=ROLE_CHOICES)
     contact_number = models.CharField(max_length=20, unique=True)
     department = models.CharField(max_length=100, null=True, blank=True)
@@ -32,10 +35,26 @@ class User(AbstractUser):
     account_status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
     profile_image_path = models.ImageField(upload_to='profile_images/', blank=True, null=True)
 
+    name = models.CharField(max_length=100)
+    station = models.CharField(max_length=100)
+    station_address = models.CharField(max_length=255)
+    home_address = models.CharField(max_length=255)
+
 
     def __str__(self):
         return self.username
     
+class Worker(models.Model):
+    
+    name = models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+    contact_number = models.CharField(max_length=15)
+    department = models.CharField(max_length=100)
+    station = models.CharField(max_length=100)
+    station_address = models.CharField(max_length=255)
+    home_address = models.CharField(max_length=255)
+    password = models.CharField(max_length=100)
+    password_confirm = models.CharField(max_length=100)
 
     
 

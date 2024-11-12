@@ -14,6 +14,8 @@ from rest_framework import status
 import ipaddress
 from django.conf import settings
 from django.contrib.auth import authenticate
+from rest_framework import serializers
+from ..models import Worker
 
 User = get_user_model()
 
@@ -137,6 +139,7 @@ class DepartmentAdminSerializer(serializers.ModelSerializer):
     
 class WorkerSerializers(serializers.ModelSerializer):
 
+
     email = serializers.EmailField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all())]
@@ -153,8 +156,8 @@ class WorkerSerializers(serializers.ModelSerializer):
         style={'input_type': 'password'}
     )
     class Meta:
-        model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'department', 'contact_number']
+        model = Worker
+        fields = ['name', 'email', 'contact_number', 'department', 'station', 'station_address', 'home_address', 'password', 'password_confirm']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -166,12 +169,14 @@ class WorkerSerializers(serializers.ModelSerializer):
         supervisor = self.context['request'].user
 
         user = User.objects.create(
-            username=validated_data['username'],
+            name=validated_data['name'],
             email=validated_data['email'],
-            department=validated_data.get('department'),
-            supervisor=supervisor,
             contact_number=validated_data.get('contact_number'),
-            role='department_admin'
+            department=validated_data.get('department'),
+            station=validated_data.get('station'),
+            station_address=validated_data.get('station_address'),
+            home_address=validated_data.get('home_address'),
+            role='worker'
         )
         user.set_password(validated_data['password'])
         user.save()

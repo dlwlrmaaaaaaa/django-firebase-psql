@@ -98,8 +98,11 @@ class DepartmentRegistration(generics.CreateAPIView):
     serializer_class = DepartmentAdminSerializer
 
 class WorkerRegistration(generics.CreateAPIView):
-    permission_classes = [IsAuthenticated, IsDepartmentAdmin]
-    serializer_class = DepartmentAdminSerializer
+    permission_classes = [IsDepartmentAdmin]
+    serializer_class = WorkerSerializers
+    permission_classes = [AllowAny]
+
+
 
 
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -215,6 +218,8 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+
+    
 # class UserProfileViewSet(viewsets.ModelViewSet):
 #     parser_classes = [MultiPartParser]
     
@@ -304,6 +309,6 @@ class UsersViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
 
-        return User.objects.filter(role__in=["citizen", "department head", "worker"])
+        return User.objects.filter(role__in=["citizen", "department_admin", "department_head", "worker"])
         # return User.objects.all()
 
