@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
-from .serializers.user_serializers import CitizenSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
+from .serializers.user_serializers import DepartmentList, CitizenSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .models import Report
 from .models import VerifyAccount
@@ -26,6 +26,7 @@ from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import PermissionDenied
+from .models import Department
 User = get_user_model()
 
 
@@ -103,7 +104,10 @@ class WorkerRegistration(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 
-
+class DepartmentListView(generics.ListAPIView):
+    permission_classes = [IsSuperAdmin]
+    queryset = Department.objects.all()
+    serializer_class = DepartmentList
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
