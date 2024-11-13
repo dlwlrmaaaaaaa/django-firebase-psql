@@ -87,9 +87,9 @@ class VerifyAccountSerializer(serializers.ModelSerializer):
             }
 
             # Add the verification data to Firestore
-            # db.collection('verifyAccount').add(verify_account_data)
+            db.collection('verifyAccount').add(verify_account_data)
             # # Use user.id as the document ID in Firestore
-            db.collection('verifyAccount').document(str(user.id)).set(verify_account_data)
+            # db.collection('verifyAccount').document(str(user.id)).set(verify_account_data)
 
             # Create a new VerifyAccount instance
             verify_account = VerifyAccount(
