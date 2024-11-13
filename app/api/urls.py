@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import MyTokenObtainPairView, SomeView, MyRefreshTokenPair, CitizenRegitsration, DeleteReportView, DepartmentRegistration, WorkerRegistration, ReportView, OTPVerificationView, UpdateReportView, UserProfileView, VerifyPasswordView, ChangePasswordView, VerifyAccountView
+from .views import DepartmentListView,MyTokenObtainPairView, SomeView, MyRefreshTokenPair, CitizenRegitsration, DeleteReportView, DepartmentRegistration, WorkerRegistration, ReportView, OTPVerificationView, UpdateReportView, UserProfileView, VerifyPasswordView, ChangePasswordView, VerifyAccountView
 from rest_framework.routers import DefaultRouter
 
 
@@ -48,6 +48,9 @@ urlpatterns = [
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
 
     path('verify-account/', VerifyAccountView.as_view(), name='verify-account'),
+
+    ##Department List View
+    path('departments/', DepartmentListView.as_view(), name='departments'),
 
     path('', include(router.urls)),  # Add this line to include the viewsets
 
