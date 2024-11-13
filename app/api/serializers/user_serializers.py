@@ -14,6 +14,8 @@ from rest_framework import status
 import ipaddress
 from django.conf import settings
 from django.contrib.auth import authenticate
+from rest_framework import serializers
+from ..models import Department
 
 User = get_user_model()
 
@@ -94,6 +96,11 @@ class CitizenSerializer(serializers.ModelSerializer):
         # Update the rest of the fields
         return super().update(instance, validated_data)
 
+class DepartmentList(serializers.ModelSerializer):
+    class Meta:
+        model = Department
+        fields = '__all__'
+    
 class DepartmentAdminSerializer(serializers.ModelSerializer):
 
     email = serializers.EmailField(
@@ -113,7 +120,7 @@ class DepartmentAdminSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'department', 'contact_number', 'ipv']
+        fields = ['username', 'email', 'password', 'password_confirm', 'department', 'contact_number', 'station','station_address']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -128,6 +135,8 @@ class DepartmentAdminSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             department=validated_data.get('department'),
             contact_number=validated_data.get('contact_number'),
+            station_address=validated_data.get('station_address'),
+            station=validated_data.get('station'),
             role='department_admin'
         )
         user.set_password(validated_data['password'])
@@ -136,6 +145,7 @@ class DepartmentAdminSerializer(serializers.ModelSerializer):
         return user
     
 class WorkerSerializers(serializers.ModelSerializer):
+
 
     email = serializers.EmailField(
         required=True,
@@ -154,7 +164,7 @@ class WorkerSerializers(serializers.ModelSerializer):
     )
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'department', 'contact_number']
+        fields = ['name', 'email', 'contact_number', 'department', 'station', 'station_address', 'home_address', 'password', 'password_confirm']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -166,12 +176,14 @@ class WorkerSerializers(serializers.ModelSerializer):
         supervisor = self.context['request'].user
 
         user = User.objects.create(
-            username=validated_data['username'],
+            name=validated_data['name'],
             email=validated_data['email'],
-            department=validated_data.get('department'),
-            supervisor=supervisor,
             contact_number=validated_data.get('contact_number'),
-            role='department_admin'
+            department=validated_data.get('department'),
+            station=validated_data.get('station'),
+            station_address=validated_data.get('station_address'),
+            home_address=validated_data.get('home_address'),
+            role='worker'
         )
         user.set_password(validated_data['password'])
         user.save()
@@ -215,6 +227,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         return data
     
+
+
 class CustomTokenRefreshSerializer(TokenRefreshSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)

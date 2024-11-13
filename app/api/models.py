@@ -2,13 +2,20 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 import uuid
 
-class User(AbstractUser):
-    # id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+class Department(models.Model):
+    id = models.AutoField(primary_key=True) 
+    name = models.CharField(max_length=100, unique=True)  
+    description = models.TextField(blank=True, null=True)
 
+    def __str__(self):
+        return self.name
+    
+    
+class User(AbstractUser):
     ROLE_CHOICES = [
         ('citizen', 'Citizen'),
         ('worker', 'Worker'),
-        ('department admin', 'Department Admin'),
+        ('department_admin', 'Department Admin'),
         ('superadmin', 'Super Admin'),
     ]
 
@@ -17,26 +24,27 @@ class User(AbstractUser):
         ('suspended', 'Suspended'),
         ('blocked', 'Blocked'),
     ]
+    
     role = models.CharField(max_length=50, choices=ROLE_CHOICES)
     contact_number = models.CharField(max_length=20, unique=True)
-    department = models.CharField(max_length=100, null=True, blank=True)
+    department = models.ForeignKey(Department, null=True, blank=True, on_delete=models.SET_NULL, related_name="users")
     supervisor = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='subordinates') 
     address = models.TextField(null=True, blank=True)
     groups = models.ManyToManyField(Group, related_name='custom_user_groups')
     user_permissions = models.ManyToManyField(Permission, related_name='custom_user_permissions')
     otp = models.CharField(max_length=6, blank=True, null=True)
-    is_email_verified = models.BooleanField(default=False)  # Set default to False
+    is_email_verified = models.BooleanField(default=False)
     ipv = models.CharField(max_length=20, unique=True, null=True)
     violation = models.IntegerField(default=0)
     is_verified = models.BooleanField(default=False)
     account_status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
     profile_image_path = models.ImageField(upload_to='profile_images/', blank=True, null=True)
-
+    station = models.CharField(max_length=100, blank=True, null=True)
+    station_address = models.CharField(max_length=255, blank=True, null=True)
+    home_address = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return self.username
-    
-
     
 
 

@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
-from .serializers.user_serializers import CitizenSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
+from .serializers.user_serializers import DepartmentList, CitizenSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .models import Report
 from .models import VerifyAccount
@@ -26,6 +26,7 @@ from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import PermissionDenied
+from .models import Department
 User = get_user_model()
 
 
@@ -98,9 +99,15 @@ class DepartmentRegistration(generics.CreateAPIView):
     serializer_class = DepartmentAdminSerializer
 
 class WorkerRegistration(generics.CreateAPIView):
-    permission_classes = [IsAuthenticated, IsDepartmentAdmin]
-    serializer_class = DepartmentAdminSerializer
+    permission_classes = [IsDepartmentAdmin]
+    serializer_class = WorkerSerializers
+    permission_classes = [AllowAny]
 
+
+class DepartmentListView(generics.ListAPIView):
+    permission_classes = [IsSuperAdmin]
+    queryset = Department.objects.all()
+    serializer_class = DepartmentList
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -215,6 +222,8 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+
+    
 # class UserProfileViewSet(viewsets.ModelViewSet):
 #     parser_classes = [MultiPartParser]
     
@@ -304,6 +313,6 @@ class UsersViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
 
-        return User.objects.filter(role__in=["citizen", "department head", "worker"])
+        return User.objects.filter(role__in=["citizen", "department_admin", "department_head", "worker"])
         # return User.objects.all()
 
