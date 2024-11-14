@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import ResendOtp,DepartmentListView,MyTokenObtainPairView, SomeView, MyRefreshTokenPair, CitizenRegitsration, DeleteReportView, DepartmentRegistration, WorkerRegistration, ReportView, OTPVerificationView, UpdateReportView, UserProfileView, VerifyPasswordView, ChangePasswordView, VerifyAccountView
+from .views import FirePredictionView, ResendOtp,DepartmentListView,MyTokenObtainPairView, SomeView, MyRefreshTokenPair, CitizenRegitsration, DeleteReportView, DepartmentRegistration, WorkerRegistration, ReportView, OTPVerificationView, UpdateReportView, UserProfileView, VerifyPasswordView, ChangePasswordView, VerifyAccountView
 from rest_framework.routers import DefaultRouter
 
 
@@ -36,6 +36,8 @@ urlpatterns = [
     ### For reports
     path('create-report/', ReportView.as_view(), name='create-report'),
 
+    ###prediction
+    path('prediction/', FirePredictionView.as_view(), name='create-report'),
 
     path('otp/verify/', OTPVerificationView.as_view(), name='verify'),
     path('resend-otp/verify/', ResendOtp.as_view(), name='resend-otp'),
