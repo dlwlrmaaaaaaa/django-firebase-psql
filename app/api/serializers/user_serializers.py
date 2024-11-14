@@ -52,7 +52,7 @@ class CitizenSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'ipv']
+        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv']
         # fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'ipv', 'profile_image_path']
     
     def validate(self, attrs):
@@ -77,6 +77,7 @@ class CitizenSerializer(serializers.ModelSerializer):
             role='citizen', 
             contact_number=validated_data.get('contact_number'),
             address=validated_data.get('address'),
+            coordinates=validated_data.get('coordinates'),
             ipv=validated_data.get('ipv')
         )
         user.set_password(validated_data['password'])
@@ -220,6 +221,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['user_id'] = self.user.id 
         data['email'] = self.user.email 
         data['address'] = self.user.address 
+        data['coordinates'] = self.user.coordinates 
         data['contact_number'] = self.user.contact_number
         data['account_type'] = account_type 
         data['is_email_verified'] = self.user.is_email_verified 

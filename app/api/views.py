@@ -21,7 +21,7 @@ from django.core.mail import send_mail
 from django.http import HttpResponse
 import random
 from django.conf import settings
-
+from django.utils import timezone
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -93,7 +93,25 @@ class CitizenRegitsration(generics.CreateAPIView):
 
         send_mail(subject, message, from_email, recipient_list, html_message=message)
     
-    
+class ResendOtp(generics.UpdateAPIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        
+        try:
+          user = User.objects.get(email=email, is_verified=False)
+        except User.DoesNotExist:
+            return Response({"error": "User not found or already verified"}, status=404)
+        otp = random.randint(100000, 999999)
+        user.otp = otp
+        user.otp_created_at = timezone.now()  
+        user.save()
+        
+        CitizenRegitsration.send_verification_email(self, user.email, otp)
+
+        return Response({"message": "OTP resent successfully"}, status=200)
+
 class DepartmentRegistration(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsSuperAdmin]
     serializer_class = DepartmentAdminSerializer
