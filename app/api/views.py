@@ -13,6 +13,7 @@ from rest_framework.parsers import MultiPartParser
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
 from .serializers.user_serializers import DepartmentList, CitizenSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
+from .serializers.fire_serializer import FirePredictionSerializer
 from .models import Report
 from .models import VerifyAccount
 from .serializers.verifyAcc_serializer import VerifyAccountSerializer
@@ -27,7 +28,92 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import PermissionDenied
 from .models import Department
+import joblib
+import pandas as pd
+import os
+import gdown
 User = get_user_model()
+
+import os
+import joblib
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework import generics
+import pandas as pd
+from django.conf import settings
+import logging
+
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+class FirePredictionView(generics.CreateAPIView):
+    serializer_class = FirePredictionSerializer
+
+    best_rf_model = None
+
+    def load_model(self):
+        # Use BASE_DIR for path construction to ensure proper path resolution
+        model_path = os.path.join(settings.BASE_DIR, 'best_rf_model2.pkl')
+
+        # Log the model path to help debug
+        logger.info(f"Attempting to load model from: {model_path}")
+
+        try:
+            # Check if the file exists before loading
+            if os.path.exists(model_path):
+                logger.info(f"Model file found at: {model_path}")
+                self.best_rf_model = joblib.load(model_path)
+                logger.info("Model loaded successfully")
+            else:
+                logger.error(f"Model file not found at: {model_path}")
+                self.best_rf_model = None
+        except Exception as e:
+            self.best_rf_model = None
+            logger.error(f"Error loading model: {e}")
+
+    def post(self, request):
+        # Load the model if it's not already loaded
+        if self.best_rf_model is None:
+            self.load_model()
+
+        if self.best_rf_model is None:
+            return Response({"error": "Model file could not be loaded"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Serialize and process input data
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Convert the input data into a pandas DataFrame for prediction
+        sample_df = pd.DataFrame([serializer.validated_data])
+
+        # Rename columns to match the model's training data
+        column_renames = {
+            "Wind": 'Wind (km/h)',
+            'Barometer': 'Barometer (mbar)',
+            'Precipitation': 'Precipitation (%)',
+            'Temperature': 'Temperature (°C)',
+            'Weather_Heavy_rain': 'Weather_Heavy rain',
+            'Weather_Light_rain': 'Weather_Light rain',
+            # Add other necessary renames here
+            'Weather_Partly_sunny': 'Weather_Partly sunny',
+            'Weather_Passing_clouds': 'Weather_Passing clouds',
+            'Weather_Scattered_clouds': 'Weather_Scattered clouds',
+            'Weather_Thunderstorms_dot': 'Weather_Thunderstorms.',
+            'Wind_kmh': 'Wind (km/h)',
+            # Add other mappings as needed
+        }
+        sample_df.rename(columns=column_renames, inplace=True)
+
+        # Predict the severity level
+        try:
+            prediction = self.best_rf_model.predict(sample_df)
+            predicted_label = ['low', 'moderate', 'high', 'severe']
+            result = predicted_label[prediction[0]]
+
+            return Response({"prediction": result}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AssignRoleView(generics.CreateAPIView):
@@ -47,6 +133,8 @@ class AssignRoleView(generics.CreateAPIView):
 
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=404)
+
+
 
 class CitizenRegitsration(generics.CreateAPIView):
     permission_classes = [AllowAny]
