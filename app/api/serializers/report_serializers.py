@@ -14,7 +14,7 @@ class AddReportSerializer(serializers.ModelSerializer):
     image_path = serializers.CharField(required=False, allow_blank=True)
     class Meta: 
         model = Report
-        fields = ['type_of_report', 'report_description', 'longitude', 'latitude', 'is_emergency', 'image_path', 'custom_type', 'floor_number']
+        fields = ['type_of_report', 'report_description', 'longitude', 'latitude', 'is_emergency', 'image_path', 'custom_type', 'floor_number', 'location']
     
     def validate_image_path(self, value):
             if value and not isinstance(value, str):
@@ -68,6 +68,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 'is_emergency': validated_data['is_emergency'],
                 'longitude': validated_data['longitude'],
                 'latitude': validated_data['latitude'],
+                'location': validated_data['location'],
                 'upvote': 0,
                 'downvote': 0,
                 'status': "Pending",
@@ -100,6 +101,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 is_emergency=validated_data['is_emergency'],
                 longitude=validated_data['longitude'],
                 latitude=validated_data['latitude'],
+                location=validated_data['location'],
                 upvote=0,
                 downvote=0,
                 status="Pending",
