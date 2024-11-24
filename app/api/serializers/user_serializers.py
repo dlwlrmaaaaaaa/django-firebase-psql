@@ -165,7 +165,7 @@ class WorkerSerializers(serializers.ModelSerializer):
     )
     class Meta:
         model = User
-        fields = ['name', 'email', 'contact_number', 'department', 'station', 'station_address', 'home_address', 'password', 'password_confirm']
+        fields = ['username', 'email', 'contact_number', 'department', 'station', 'station_address','password', 'password_confirm']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -175,15 +175,14 @@ class WorkerSerializers(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('password_confirm')
         supervisor = self.context['request'].user
-
+    
         user = User.objects.create(
-            name=validated_data['name'],
+            username=validated_data['username'],
             email=validated_data['email'],
             contact_number=validated_data.get('contact_number'),
             department=validated_data.get('department'),
             station=validated_data.get('station'),
             station_address=validated_data.get('station_address'),
-            home_address=validated_data.get('home_address'),
             role='worker'
         )
         user.set_password(validated_data['password'])
@@ -191,43 +190,56 @@ class WorkerSerializers(serializers.ModelSerializer):
 
         return user
 
-
-
-
-
-
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        username_or_email = attrs.get('username')  
-        password = attrs.get('password') 
-        user = authenticate(request=self.context.get('request'), username=username_or_email, password=password)
+        username_or_email = attrs.get('username')
+        password = attrs.get('password')
+        user = authenticate(
+            request=self.context.get('request'),
+            username=username_or_email,
+            password=password
+        )
 
         if not user:
-            raise ValidationError({"detail": "Invalid credentials. Please try again."}, code=status.HTTP_401_UNAUTHORIZED)
+            raise ValidationError(
+                {"detail": "Invalid credentials. Please try again."},
+                code=status.HTTP_401_UNAUTHORIZED
+            )
 
         if not user.is_active:
-            raise ValidationError({"detail": "User account is disabled."}, code=status.HTTP_403_FORBIDDEN)
+            raise ValidationError(
+                {"detail": "User account is disabled."},
+                code=status.HTTP_403_FORBIDDEN
+            )
 
         self.user = user
+        data = super().validate(attrs)
 
+        # Add custom fields to the response
         account_type = get_account_type(self.user)
 
-        # if account_type == 'citizen':
-        #     raise ValidationError({"detail": "Access restricted to admins only."}, code=status.HTTP_403_FORBIDDEN)
-        
-        data = super().validate(attrs)
-        data['user_id'] = self.user.id
-        data['username'] = self.user.username  
-        data['user_id'] = self.user.id 
-        data['email'] = self.user.email 
-        data['address'] = self.user.address 
-        data['coordinates'] = self.user.coordinates 
-        data['contact_number'] = self.user.contact_number
-        data['account_type'] = account_type 
-        data['is_email_verified'] = self.user.is_email_verified 
-        data['is_verified'] = self.user.is_verified 
+        data.update({
+            'user_id': self.user.id,
+            'username': self.user.username,
+            'email': self.user.email,
+            'address': getattr(self.user, 'address', None),
+            'coordinates': getattr(self.user, 'coordinates', None),
+            'contact_number': getattr(self.user, 'contact_number', None),
+            'account_type': account_type,
+            'is_email_verified': getattr(self.user, 'is_email_verified', False),
+            'is_verified': getattr(self.user, 'is_verified', False),
+        })
+
+        if account_type in ['department_admin', 'worker']:
+            data.update({
+                'department': str(self.user.department_id) if self.user.department else None,
+                'station_address': getattr(self.user, 'station_address', None),
+                'station': getattr(self.user, 'station', None),
+            })
 
         return data
+
+
     
 
 
@@ -285,11 +297,16 @@ class ChangePasswordSerializer(serializers.Serializer):
     
 class UsersSerializer(serializers.ModelSerializer):
     # username = serializers.SerializerMethodField()
-
     class Meta:
         model = User
         # fields = ['full_name', 'contact_number', 'is_email_verified', 'role', 'is_active', 'is_verified']
-        fields = ['username', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email', 'id']
+        fields = ['username', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email', 'id', 'department']
 
     # def get_full_name(self, obj):
     #     return f"{obj.first_name} {obj.last_name}"
+
+class GetWorkerSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ['username', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email', 'id', 'department']

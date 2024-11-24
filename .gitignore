@@ -6,6 +6,6 @@ app/app/__pycache__/
 *.pyc
 *.pyo
 app/settings.py/
-app/app/firebase.py
+./app/app/firebase.py
 
-/app/temporary_path
+./app/app/temporary_path
