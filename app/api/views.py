@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
-from .serializers.user_serializers import DepartmentList, CitizenSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
+from .serializers.user_serializers import DepartmentList, CitizenSerializer, GetWorkerSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .serializers.fire_serializer import FirePredictionSerializer
 from .models import Report
@@ -414,11 +414,25 @@ class WorkersViewSet(viewsets.ReadOnlyModelViewSet):
 
 class UsersViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UsersSerializer
-    # permission_classes = [IsAuthenticated]
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsSuperAdmin]
 
     def get_queryset(self):
 
         return User.objects.filter(role__in=["citizen", "department_admin", "department_head", "worker"])
-        # return User.objects.all()
+
+
+class GetWorkerViewSet(generics.GenericAPIView):
+    serializer_class = GetWorkerSerializer
+    permission_classes = [IsDepartmentAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.department:
+            return User.objects.none()
+
+        return User.objects.filter(
+            role__in=["worker"], 
+            department=user.department
+        )
 
