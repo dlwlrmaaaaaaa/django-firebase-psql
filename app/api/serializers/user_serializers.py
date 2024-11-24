@@ -52,7 +52,7 @@ class CitizenSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv']
+        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv', 'station', 'station_address', 'department_id']
         # fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'ipv', 'profile_image_path']
     
     def validate(self, attrs):
@@ -165,7 +165,7 @@ class WorkerSerializers(serializers.ModelSerializer):
     )
     class Meta:
         model = User
-        fields = ['username', 'email', 'contact_number', 'department', 'station', 'station_address','password', 'password_confirm']
+        fields = ['username', 'email', 'contact_number', 'department', 'station', 'station_address', 'address', 'password', 'password_confirm']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -183,6 +183,7 @@ class WorkerSerializers(serializers.ModelSerializer):
             department=validated_data.get('department'),
             station=validated_data.get('station'),
             station_address=validated_data.get('station_address'),
+            address=validated_data.get('address'),
             role='worker'
         )
         user.set_password(validated_data['password'])
@@ -300,7 +301,7 @@ class UsersSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         # fields = ['full_name', 'contact_number', 'is_email_verified', 'role', 'is_active', 'is_verified']
-        fields = ['username', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email', 'id', 'department']
+        fields = ['username', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email', 'id', 'date_joined']
 
     # def get_full_name(self, obj):
     #     return f"{obj.first_name} {obj.last_name}"
