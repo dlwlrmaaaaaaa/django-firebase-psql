@@ -109,17 +109,20 @@ WSGI_APPLICATION = 'app.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+import dj_database_url
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'backend',
         'USER': 'postgres',
-        'PASSWORD': '1804',
+        'PASSWORD': '0713',
         'HOST': 'localhost',
         'PORT': '5432'
     }
 }
+
+# DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_user:fjhpNQohlSlkANEP9LgpRnBDjAIulvhI@dpg-ct1cm768ii6s73feka0g-a.singapore-postgres.render.com/crisp_postgresql_db')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -164,7 +167,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-
 CORS_ALLOWED_ORIGINS = [
     'http://192.168.1.191:8081',
     'http://192.168.1.191:8000',
@@ -174,7 +176,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.1.25:8081",
     "http://192.168.1.25:8000",
     "http://192.168.105.172:8081",
-    "http://172.20.10.7:8081"
+    "http://172.20.10.7:8081",
+    "http://192.168.1.17:8081"
 ]
 CORS_ORIGIN_WHITELIST = [
     'http://192.168.1.191:8081',

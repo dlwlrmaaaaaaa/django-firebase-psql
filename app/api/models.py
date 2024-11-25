@@ -38,6 +38,7 @@ class User(AbstractUser):
     ipv = models.CharField(max_length=20, unique=True, null=True)
     violation = models.IntegerField(default=0)
     is_verified = models.BooleanField(default=False)
+    score = models.IntegerField(null=True)
     account_status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
     profile_image_path = models.ImageField(upload_to='profile_images/', blank=True, null=True)
     station = models.CharField(max_length=100, blank=True, null=True)

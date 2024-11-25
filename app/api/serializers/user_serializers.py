@@ -20,7 +20,6 @@ from ..models import Department
 User = get_user_model()
 
 class CitizenSerializer(serializers.ModelSerializer):
-
     username = serializers.CharField(
         required=True,
         allow_blank=False,
@@ -29,18 +28,18 @@ class CitizenSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         required=True,
         allow_blank=False,
-         validators=[UniqueValidator(queryset=User.objects.all(), message="This email is already registered.")]
+        validators=[UniqueValidator(queryset=User.objects.all(), message="This email is already registered.")]
     )
     password = serializers.CharField(
-        write_only=True, 
-        required=True, 
-        validators=[validate_password], 
+        write_only=True,
+        required=True,
+        validators=[validate_password],
         style={'input_type': 'password'},
         error_messages={'required': 'Password is required.'}
     )
     password_confirm = serializers.CharField(
-        write_only=True, 
-        required=True, 
+        write_only=True,
+        required=True,
         style={'input_type': 'password'},
         error_messages={'required': 'Password confirmation is required.'}
     )
@@ -49,53 +48,52 @@ class CitizenSerializer(serializers.ModelSerializer):
         allow_blank=False,
         validators=[UniqueValidator(queryset=User.objects.all(), message="This contact number is already in use.")]
     )
-    
+
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv', 'station', 'station_address', 'department_id']
-        # fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'ipv', 'profile_image_path']
-    
+        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv', 'station', 'station_address', 'department_id', 'score']
+
     def validate(self, attrs):
-        if 'password' in attrs and 'password_confirm' in attrs:
-            if attrs['password'] != attrs['password_confirm']:
-                raise serializers.ValidationError({'password': 'Password fields did not match.'})
-            for field in ['username', 'email', 'contact_number']:
-                if not attrs.get(field):  # Validate non-empty values
-                    raise serializers.ValidationError({field: f"{field.capitalize()} cannot be empty."})
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError({'password_confirm': 'Passwords do not match.'})
         return attrs
+
     def validate_ipv(self, value):
         try:
             ipaddress.ip_address(value)
         except ValueError:
-            raise ValidationError("Invalid IP address format.")
+            raise serializers.ValidationError("Invalid IP address format.")
         return value
-    
+
     def create(self, validated_data):
         user = User(
             username=validated_data['username'],
             email=validated_data['email'],
-            role='citizen', 
+            role='citizen',
             contact_number=validated_data.get('contact_number'),
             address=validated_data.get('address'),
             coordinates=validated_data.get('coordinates'),
-            ipv=validated_data.get('ipv')
+            ipv=validated_data.get('ipv'),
+            score=50
         )
         user.set_password(validated_data['password'])
         user.save()
         return user
-    
+
     def update(self, instance, validated_data):
-        # If password is provided, update it
         password = validated_data.pop('password', None)
         password_confirm = validated_data.pop('password_confirm', None)
 
         if password and password_confirm:
             if password != password_confirm:
-                raise serializers.ValidationError({"password": "Passwords must match."})
+                raise serializers.ValidationError({"password_confirm": "Passwords must match."})
             instance.set_password(password)
-        
-        # Update the rest of the fields
-        return super().update(instance, validated_data)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
 
 class DepartmentList(serializers.ModelSerializer):
     class Meta:
@@ -229,6 +227,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'account_type': account_type,
             'is_email_verified': getattr(self.user, 'is_email_verified', False),
             'is_verified': getattr(self.user, 'is_verified', False),
+            'score': getattr(self.user, 'score', None),
         })
 
         if account_type in ['department_admin', 'worker']:
@@ -255,16 +254,28 @@ class CustomTokenRefreshSerializer(TokenRefreshSerializer):
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             raise ValidationError({"detail": "User not found."})
-        
-        data['user_id'] = user.id
-        data['username'] = user.username
-        data['email'] = user.email
-        data['address'] = user.address
-        data['contact_number'] = user.contact_number
-        data['account_type'] = get_account_type(user)
-        data['is_email_verified'] = user.is_email_verified
-        data['is_verified'] = user.is_verified
-        
+        account_type = get_account_type(self.user)
+        data.update({
+            'user_id': self.user.id,
+            'username': self.user.username,
+            'email': self.user.email,
+            'address': getattr(self.user, 'address', None),
+            'coordinates': getattr(self.user, 'coordinates', None),
+            'contact_number': getattr(self.user, 'contact_number', None),
+            'account_type': account_type,
+            'is_email_verified': getattr(self.user, 'is_email_verified', False),
+            'is_verified': getattr(self.user, 'is_verified', False),
+            'score': getattr(self.user, 'score', 50),
+            'violation': getattr(self.user, 'violation', 0),
+        })
+
+        if account_type in ['department_admin', 'worker']:
+            data.update({
+                'department': str(self.user.department_id) if self.user.department else None,
+                'station_address': getattr(self.user, 'station_address', None),
+                'station': getattr(self.user, 'station', None),
+        })
+
         return data
 
 
