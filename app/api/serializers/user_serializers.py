@@ -51,7 +51,7 @@ class CitizenSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv', 'station', 'station_address', 'department_id', 'score']
+        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv', 'score']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -136,6 +136,7 @@ class DepartmentAdminSerializer(serializers.ModelSerializer):
             contact_number=validated_data.get('contact_number'),
             station_address=validated_data.get('station_address'),
             station=validated_data.get('station'),
+            is_verified=True,
             role='department_admin'
         )
         user.set_password(validated_data['password'])
@@ -182,6 +183,7 @@ class WorkerSerializers(serializers.ModelSerializer):
             station=validated_data.get('station'),
             station_address=validated_data.get('station_address'),
             address=validated_data.get('address'),
+            supervisor_id=supervisor.id,
             role='worker'
         )
         user.set_password(validated_data['password'])
@@ -233,6 +235,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if account_type in ['department_admin', 'worker']:
             data.update({
                 'department': str(self.user.department_id) if self.user.department else None,
+                'supervisor': str(self.user.supervisor_id) if self.user.supervisor_id else None,
                 'station_address': getattr(self.user, 'station_address', None),
                 'station': getattr(self.user, 'station', None),
             })
