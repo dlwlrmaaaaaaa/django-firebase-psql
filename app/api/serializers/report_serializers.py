@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import Report
+from ..models import Report, Department
 from datetime import datetime
 from firebase_admin import storage
 from app.firebase import db, bucket
@@ -8,27 +8,80 @@ from django.core.files.base import ContentFile
 from app.firebase import db
 import uuid
 import base64
+from django.contrib.auth import get_user_model
+from math import radians, sin, cos, sqrt, atan2
 
+User = get_user_model()
 
 class AddReportSerializer(serializers.ModelSerializer):
     image_path = serializers.CharField(required=False, allow_blank=True)
     class Meta: 
         model = Report
         fields = ['type_of_report', 'report_description', 'longitude', 'latitude', 'is_emergency', 'image_path', 'custom_type', 'floor_number', 'location']
+    @staticmethod
+    def calculate_distance(lat1, lon1, lat2, lon2):
+        """Calculate the Haversine distance between two points."""
+        R = 6371  # Earth's radius in kilometers
+        dlat = radians(lat2 - lat1)
+        dlon = radians(lon2 - lon1)
+        a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return R * c
     
     def validate_image_path(self, value):
             if value and not isinstance(value, str):
                 raise serializers.ValidationError("Image path must be a valid string.")
             return value
+    
     def create(self, validated_data):
         try:
             # Get the current user and generate a report UUID
             user = self.context['request'].user
             report_uuid = uuid.uuid4()
             image_path_string = ''
-            
-            # Prepare the basic report data
-            
+            if not all(key in validated_data for key in ['type_of_report', 'latitude', 'longitude']):
+                raise serializers.ValidationError("Missing required fields in the request.")
+
+            if validated_data['is_emergency'] == 'emergency':
+                report_lat = float(validated_data['latitude'])
+                report_lon = float(validated_data['longitude'])
+                report_type = validated_data['type_of_report']
+                
+                report_type_to_department_id = {
+                        "Fires": 1, 
+                        "Medical": 2,
+                        "Police": 3,
+                        "Street lights": 4,
+                        "Potholes": 5,
+                    }
+
+                target_department_id = report_type_to_department_id.get(report_type)
+
+                if not target_department_id:
+                    raise serializers.ValidationError({"detail": f"Unknown report type: {report_type}"})
+                department_admins = User.objects.filter(
+                        role='department_admin',
+                        department_id=target_department_id 
+                    )
+                nearest_admin = None
+                min_distance = float('inf')
+
+                for admin in department_admins:
+                    if admin.station_address:  # Ensure the admin has station coordinates
+                        try:
+                            station_lat, station_lon = map(float, admin.station_address.split(','))
+                        except ValueError:
+                            raise serializers.ValidationError({"detail": "Invalid station_address format. Expected 'latitude,longitude'."})
+
+                        distance = self.calculate_distance(report_lat, report_lon, station_lat, station_lon)
+
+                        if distance < min_distance:
+                            min_distance = distance
+                            nearest_admin = admin
+
+                if nearest_admin:
+                    # Now assign to the department ID, not the admin
+                    validated_data['assigned_id'] = nearest_admin.id
 
             # Check for the image_path (base64 string)
             if 'image_path' in validated_data and validated_data['image_path']:
@@ -77,8 +130,10 @@ class AddReportSerializer(serializers.ModelSerializer):
                 'custom_type': validated_data['custom_type'],
                 'floor_number': validated_data['floor_number'],
                 'is_validated': False,
-                'update_date': datetime.now().isoformat(),
+                'update_date': datetime.now().isoformat(),     
+                'assigned_to_id': validated_data.get('assigned_id'),         
             }
+            
             # Add the report to Firestore
             collection_path = 'reports'
             document_id = validated_data['type_of_report'].lower()         
@@ -107,7 +162,8 @@ class AddReportSerializer(serializers.ModelSerializer):
                 status="Pending",
                 custom_type=validated_data['custom_type'],
                 floor_number=validated_data['floor_number'],
-                report_date=datetime.now()
+                report_date=datetime.now(),
+                assigned_to_id=validated_data.get('assigned_id'),       
             )
             print(report)
             report.save()
