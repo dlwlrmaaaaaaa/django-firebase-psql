@@ -125,7 +125,12 @@ class AddReportSerializer(serializers.ModelSerializer):
                                     'usernames': usernames,
                                     'user_ids': user_ids,
                                 })
-
+                                validation_ref = report_ref.collection('validation').document(str(user.id))
+                                validation_data = {
+                                    'user_id': user.id,
+                                    'validated': "validated",
+                                }
+                                validation_ref.set(validation_data)
                             validated_data['report_count'] = report_count
                             return duplicate_report
 
