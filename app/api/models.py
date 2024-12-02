@@ -67,13 +67,14 @@ class Report(models.Model):
     latitude = models.FloatField(null=True)
     longitude = models.FloatField(null=True)
     location = models.CharField(null=True, max_length=255)
+    report_count = models.IntegerField(default=0)
     upvote = models.IntegerField(default=0)
     downvote = models.IntegerField(default=0)
     report_date = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=50, default="Pending")
     custom_type = models.CharField(max_length=100, null=True)
     floor_number = models.CharField(max_length=100, null=True)
-    
+    force_submit = models.BooleanField(default=False)
 
 
     def __str__(self):
