@@ -184,7 +184,8 @@ class WorkerSerializers(serializers.ModelSerializer):
             station_address=validated_data.get('station_address'),
             address=validated_data.get('address'),
             supervisor_id=supervisor.id,
-            role='worker'
+            role='worker',
+            is_verified=True
         )
         user.set_password(validated_data['password'])
         user.save()
