@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
-from .serializers.user_serializers import DepartmentList, CitizenSerializer, GetWorkerSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
+from .serializers.user_serializers import DepartmentList, CitizenSerializer, GetWorkerSerializer, UserProfileSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .serializers.fire_serializer import FirePredictionSerializer
 from .models import Report
@@ -227,7 +227,7 @@ class ReportView(generics.CreateAPIView):
 
 class DeleteReportView(generics.DestroyAPIView):
     query_set = Report.objects.all()
-    permission_class = [IsAuthenticated, IsCitizen, IsSuperAdmin]
+    permission_class = [IsCitizen, IsSuperAdmin]
 
     def get_object(self):
         report_id = self.kwargs.get('report_id')
@@ -237,7 +237,7 @@ class DeleteReportView(generics.DestroyAPIView):
         report = self.get_object()
 
         # SuperAdmin role can delete any report
-        if report.user_id != request.user:
+        if report.user_id != request.user.id:
             return Response({"error": "You are not authorized to delete this report."}, status=status.HTTP_403_FORBIDDEN)
         
         if request.user.role.lower() == 'super_admin' or 'superadmin':
@@ -314,7 +314,7 @@ class OTPVerificationView(generics.GenericAPIView):
         
 class UserProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = CitizenSerializer  # Use the same serializer you use for registration or create a new one
+    serializer_class = UserProfileSerializer  # Use the same serializer you use for registration or create a new one
 
     def get_object(self):
         return self.request.user  # Retrieve the authenticated user
@@ -414,8 +414,8 @@ class WorkersViewSet(viewsets.ReadOnlyModelViewSet):
 
 class UsersViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UsersSerializer
-    permission_classes = [IsAuthenticated]
-    # permission_classes = [IsSuperAdmin]
+    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsSuperAdmin]
 
     def get_queryset(self):
 

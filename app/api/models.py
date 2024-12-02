@@ -59,21 +59,22 @@ class Report(models.Model):
     report_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE) 
     image_path = models.CharField(max_length=255)
-    assigned_by = models.CharField(max_length=50)
-    assigned_by_department = models.CharField(max_length=100)
+    assigned_by = models.ForeignKey(User, related_name="assigned_reports", on_delete=models.SET_NULL, null=True, blank=True, default=None)
+    assigned_to = models.ForeignKey(User, related_name="assigned_reports_to_department", on_delete=models.SET_NULL, null=True, blank=True, default=None)
     type_of_report = models.CharField(max_length=100)
     report_description = models.CharField(max_length=255)
     is_emergency = models.CharField(max_length=20, choices=CATEGORY_CHOICES, null=True)
     latitude = models.FloatField(null=True)
     longitude = models.FloatField(null=True)
     location = models.CharField(null=True, max_length=255)
+    report_count = models.IntegerField(default=0)
     upvote = models.IntegerField(default=0)
     downvote = models.IntegerField(default=0)
     report_date = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=50, default="Pending")
     custom_type = models.CharField(max_length=100, null=True)
     floor_number = models.CharField(max_length=100, null=True)
-    
+    force_submit = models.BooleanField(default=False)
 
 
     def __str__(self):
