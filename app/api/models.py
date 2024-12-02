@@ -74,7 +74,7 @@ class Report(models.Model):
     status = models.CharField(max_length=50, default="Pending")
     custom_type = models.CharField(max_length=100, null=True)
     floor_number = models.CharField(max_length=100, null=True)
-    
+    force_submit = models.BooleanField(default=False)
 
 
     def __str__(self):
