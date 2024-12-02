@@ -44,7 +44,7 @@ urlpatterns = [
 
     ##update reports
     path('reports/<int:report_id>/update/', UpdateReportView.as_view(), name='update-report'),
-    path('reports/<uuid:report_id>/delete/', DeleteReportView.as_view(), name='update-report'),
+    path('reports/<uuid:report_id>/delete/', DeleteReportView.as_view(), name='delete-report'),
 
     path('user/profile/', UserProfileView.as_view(), name='user_profile'),
     path('verify-password/', VerifyPasswordView.as_view(), name='verify-password'),

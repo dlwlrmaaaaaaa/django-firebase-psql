@@ -10,14 +10,17 @@ import uuid
 import base64
 from django.contrib.auth import get_user_model
 from math import radians, sin, cos, sqrt, atan2
+from django.utils.timezone import now, timedelta
 
 User = get_user_model()
 
 class AddReportSerializer(serializers.ModelSerializer):
     image_path = serializers.CharField(required=False, allow_blank=True)
-    class Meta: 
+
+    class Meta:
         model = Report
         fields = ['type_of_report', 'report_description', 'longitude', 'latitude', 'is_emergency', 'image_path', 'custom_type', 'floor_number', 'location']
+
     @staticmethod
     def calculate_distance(lat1, lon1, lat2, lon2):
         """Calculate the Haversine distance between two points."""
@@ -27,42 +30,84 @@ class AddReportSerializer(serializers.ModelSerializer):
         a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return R * c
-    
+
+    def check_duplicate_reports(self, validated_data):
+        """Check for duplicate reports within a certain radius and time."""
+        report_lat = float(validated_data['latitude'])
+        report_lon = float(validated_data['longitude'])
+        report_type = validated_data['type_of_report']
+        time_threshold = datetime.now() - timedelta(minutes=30)
+
+        # Query Firestore for recent reports of the same type
+        collection_path = 'reports'
+        document_id = report_type.lower()
+        doc_ref = db.collection(collection_path).document(document_id)
+        recent_reports = doc_ref.collection('reports').where(
+            'report_date', '>=', time_threshold.isoformat()
+        ).stream()
+
+        for report in recent_reports:
+            report_data = report.to_dict()
+            existing_lat = float(report_data['latitude'])
+            existing_lon = float(report_data['longitude'])
+
+            # Calculate distance to detect duplicates
+            distance = self.calculate_distance(report_lat, report_lon, existing_lat, existing_lon)
+            if distance <= 0.5:  # 0.5 km radius
+                return True, {
+                    key: str(value) for key, value in report_data.items()
+                }
+
+        return False, None
+
     def validate_image_path(self, value):
-            if value and not isinstance(value, str):
-                raise serializers.ValidationError("Image path must be a valid string.")
-            return value
-    
+        """Ensure image_path is a valid base64 string."""
+        if value and not isinstance(value, str):
+            raise serializers.ValidationError("Image path must be a valid string.")
+        return value
+
     def create(self, validated_data):
         try:
-            # Get the current user and generate a report UUID
+            is_duplicate, duplicate_report = self.check_duplicate_reports(validated_data)
+            print(f"Duplicate Check - is_duplicate: {is_duplicate}, duplicate_report: {duplicate_report}")
+
+            if is_duplicate:
+                raise serializers.ValidationError({
+                    "detail": "A similar report already exists.",
+                    "existing_report": duplicate_report
+                })
+
+            # Ensure required fields are present
+            if not all(key in validated_data for key in ['type_of_report', 'latitude', 'longitude']):
+                raise serializers.ValidationError("Missing required fields in the request.")
+
             user = self.context['request'].user
             report_uuid = uuid.uuid4()
             image_path_string = ''
-            if not all(key in validated_data for key in ['type_of_report', 'latitude', 'longitude']):
-                raise serializers.ValidationError("Missing required fields in the request.")
 
             if validated_data['is_emergency'] == 'emergency':
                 report_lat = float(validated_data['latitude'])
                 report_lon = float(validated_data['longitude'])
                 report_type = validated_data['type_of_report']
-                
+
                 report_type_to_department_id = {
-                        "Fires": 1, 
-                        "Medical": 2,
-                        "Police": 3,
-                        "Street lights": 4,
-                        "Potholes": 5,
-                    }
+                    "Fires": 1, 
+                    "Medical": 2,
+                    "Police": 3,
+                    "Street lights": 4,
+                    "Potholes": 5,
+                }
 
                 target_department_id = report_type_to_department_id.get(report_type)
 
                 if not target_department_id:
                     raise serializers.ValidationError({"detail": f"Unknown report type: {report_type}"})
+
                 department_admins = User.objects.filter(
-                        role='department_admin',
-                        department_id=target_department_id 
-                    )
+                    role='department_admin',
+                    department_id=target_department_id
+                )
+
                 nearest_admin = None
                 min_distance = float('inf')
 
@@ -80,12 +125,10 @@ class AddReportSerializer(serializers.ModelSerializer):
                             nearest_admin = admin
 
                 if nearest_admin:
-                    # Now assign to the department ID, not the admin
                     validated_data['assigned_id'] = nearest_admin.id
 
             # Check for the image_path (base64 string)
             if 'image_path' in validated_data and validated_data['image_path']:
-                # Extract base64 data from the image_path
                 image_data = validated_data['image_path']
                 image_format, imgstr = image_data.split(';base64,')  # Splitting the format
                 ext = image_format.split('/')[-1]  # Getting the file extension
@@ -111,7 +154,6 @@ class AddReportSerializer(serializers.ModelSerializer):
 
                 # Add the public image URL to report data
                 image_path_string = image_blob.public_url
-                print(image_blob.public_url)
 
             report_data = {
                 'user_id': user.id,  
@@ -133,15 +175,13 @@ class AddReportSerializer(serializers.ModelSerializer):
                 'update_date': datetime.now().isoformat(),     
                 'assigned_to_id': validated_data.get('assigned_id'),         
             }
-            
+
             # Add the report to Firestore
             collection_path = 'reports'
             document_id = validated_data['type_of_report'].lower()         
             try:
                 doc_ref = db.collection(collection_path).document(document_id)
                 doc_ref.collection('reports').document(str(report_uuid)).set(report_data)
-                doc_ref.collection('votes')
-                print(f"Report successfully added to {document_id}/reports/{report_uuid}.")
             except Exception as e:
                 print(f"Error adding report to Firestore: {e}")
                 raise e
@@ -165,16 +205,15 @@ class AddReportSerializer(serializers.ModelSerializer):
                 report_date=datetime.now(),
                 assigned_to_id=validated_data.get('assigned_id'),       
             )
-            print(report)
             report.save()
 
             return report
-        
+        except serializers.ValidationError as e:
+            # Catch the ValidationError and raise it again to ensure the message is sent back to the frontend
+            raise e
         except Exception as e:
             print(f'An exception occurred: {e}')
             raise serializers.ValidationError({"detail": "Failed to create the report due to an internal error."})
-    
-
 class UpdateReportSerializer(serializers.ModelSerializer):
        
        class Meta:
@@ -188,6 +227,7 @@ class UpdateReportSerializer(serializers.ModelSerializer):
                 return super().update(instance, validated_data)
              else:
                 raise serializers.ValidationError("You are not authorized to update this report.")
+
 
 
      

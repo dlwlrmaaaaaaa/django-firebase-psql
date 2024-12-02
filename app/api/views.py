@@ -227,7 +227,7 @@ class ReportView(generics.CreateAPIView):
 
 class DeleteReportView(generics.DestroyAPIView):
     query_set = Report.objects.all()
-    permission_class = [IsAuthenticated, IsCitizen, IsSuperAdmin]
+    permission_class = [IsCitizen, IsSuperAdmin]
 
     def get_object(self):
         report_id = self.kwargs.get('report_id')
@@ -237,7 +237,7 @@ class DeleteReportView(generics.DestroyAPIView):
         report = self.get_object()
 
         # SuperAdmin role can delete any report
-        if report.user_id != request.user:
+        if report.user_id != request.user.id:
             return Response({"error": "You are not authorized to delete this report."}, status=status.HTTP_403_FORBIDDEN)
         
         if request.user.role.lower() == 'super_admin' or 'superadmin':
