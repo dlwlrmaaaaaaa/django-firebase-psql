@@ -4,9 +4,12 @@ from datetime import datetime
 from firebase_admin import storage
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.contrib.auth import get_user_model
 from app.firebase import db
 import uuid
 import base64
+
+User = get_user_model()
 
 class VerifyAccountSerializer(serializers.ModelSerializer):
     photo_image_path = serializers.CharField(required=False, allow_blank=True)
@@ -111,3 +114,9 @@ class VerifyAccountSerializer(serializers.ModelSerializer):
         except Exception as e:
             print(f'An exception occurred: {e}')
             raise serializers.ValidationError({"detail": "Failed to create the verification account due to an internal error."})
+
+class VerifyUser(serializers.ModelSerializer):
+    
+    class Meta:
+        model = User
+        fields = ['is_verified', 'score']

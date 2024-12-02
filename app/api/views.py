@@ -16,7 +16,7 @@ from .serializers.report_serializers import AddReportSerializer, UpdateReportSer
 from .serializers.fire_serializer import FirePredictionSerializer
 from .models import Report
 from .models import VerifyAccount
-from .serializers.verifyAcc_serializer import VerifyAccountSerializer
+from .serializers.verifyAcc_serializer import VerifyAccountSerializer, VerifyUser
 from .serializers.otp_serializer import OTPVerificationSerializer
 from django.core.mail import send_mail
 from django.http import HttpResponse
@@ -387,6 +387,52 @@ class VerifyAccountView(generics.CreateAPIView):
             "data": VerifyAccountSerializer(verify_account).data
         }, status=status.HTTP_201_CREATED)
     
+class AcceptVerifyAccount(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    permission_classes = [IsSuperAdmin] 
+    serializer_class = VerifyUser
+
+    def update(self, request, *args, **kwargs):
+        try:
+            # Fetch the instance
+            instance = self.get_object()
+
+            # Logging for debugging
+            print(f"Before update: is_verified={instance.is_verified}, score={instance.score}")
+
+            # Update fields
+            instance.is_verified = True
+            instance.score = (instance.score or 0) + 20  # Ensure score is not None
+            
+            # Save changes to the database
+            instance.save(update_fields=["is_verified", "score"])
+
+            # Save using serializer to handle extra validation or custom logic
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+
+            # Logging for debugging
+            print(f"After update: is_verified={instance.is_verified}, score={instance.score}")
+
+            # Return success response
+            return Response(
+                {'detail': 'User successfully verified and score updated.'},
+                status=status.HTTP_200_OK
+            )
+        except ValidationError as e:
+            # Handle validation errors
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            # Handle general errors
+            print(f"Error: {e}")
+            return Response(
+                {'detail': 'An error occurred while updating the user.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+
 class CitizenViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.filter(role='citizen')  # Filter for citizens
     serializer_class = CitizenSerializer
