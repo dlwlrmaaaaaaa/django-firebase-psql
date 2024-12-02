@@ -51,7 +51,7 @@ class CitizenSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv', 'score']
+        fields = ['username', 'full_name', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv', 'score']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -315,10 +315,21 @@ class UsersSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         # fields = ['full_name', 'contact_number', 'is_email_verified', 'role', 'is_active', 'is_verified']
-        fields = ['username', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email', 'id', 'date_joined']
+        fields = ['username', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email', 'id', 'date_joined', 'score']
 
     # def get_full_name(self, obj):
     #     return f"{obj.first_name} {obj.last_name}"
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['full_name', 'email', 'contact_number', 'role']  # Only include the desired fields
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}"
+
 
 class GetWorkerSerializer(serializers.ModelSerializer):
 

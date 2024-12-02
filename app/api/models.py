@@ -67,6 +67,7 @@ class Report(models.Model):
     latitude = models.FloatField(null=True)
     longitude = models.FloatField(null=True)
     location = models.CharField(null=True, max_length=255)
+    report_count = models.IntegerField(default=0)
     upvote = models.IntegerField(default=0)
     downvote = models.IntegerField(default=0)
     report_date = models.DateTimeField(auto_now=True)

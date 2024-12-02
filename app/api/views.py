@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
-from .serializers.user_serializers import DepartmentList, CitizenSerializer, GetWorkerSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
+from .serializers.user_serializers import DepartmentList, CitizenSerializer, GetWorkerSerializer, UserProfileSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .serializers.fire_serializer import FirePredictionSerializer
 from .models import Report
@@ -314,7 +314,7 @@ class OTPVerificationView(generics.GenericAPIView):
         
 class UserProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = CitizenSerializer  # Use the same serializer you use for registration or create a new one
+    serializer_class = UserProfileSerializer  # Use the same serializer you use for registration or create a new one
 
     def get_object(self):
         return self.request.user  # Retrieve the authenticated user
