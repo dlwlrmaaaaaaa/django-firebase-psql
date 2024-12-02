@@ -136,7 +136,8 @@ class DepartmentAdminSerializer(serializers.ModelSerializer):
             contact_number=validated_data.get('contact_number'),
             station_address=validated_data.get('station_address'),
             station=validated_data.get('station'),
-            role='department_admin'
+            role='department_admin',
+            is_verified=True
         )
         user.set_password(validated_data['password'])
         user.save()
@@ -182,7 +183,8 @@ class WorkerSerializers(serializers.ModelSerializer):
             station=validated_data.get('station'),
             station_address=validated_data.get('station_address'),
             address=validated_data.get('address'),
-            role='worker'
+            role='worker',
+            is_verified=True
         )
         user.set_password(validated_data['password'])
         user.save()
