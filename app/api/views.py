@@ -414,7 +414,6 @@ class WorkersViewSet(viewsets.ReadOnlyModelViewSet):
 
 class UsersViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UsersSerializer
-    # permission_classes = [IsAuthenticated]
     permission_classes = [IsSuperAdmin]
 
     def get_queryset(self):
