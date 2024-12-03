@@ -51,7 +51,7 @@ class CitizenSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'full_name', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv', 'score']
+        fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv', 'score']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -184,8 +184,8 @@ class WorkerSerializers(serializers.ModelSerializer):
             station_address=validated_data.get('station_address'),
             address=validated_data.get('address'),
             supervisor_id=supervisor.id,
+            is_verified=True,
             role='worker',
-            is_verified=True
         )
         user.set_password(validated_data['password'])
         user.save()
@@ -321,15 +321,25 @@ class UsersSerializer(serializers.ModelSerializer):
     # def get_full_name(self, obj):
     #     return f"{obj.first_name} {obj.last_name}"
 
+# class UserProfileSerializer(serializers.ModelSerializer):
+#     full_name = serializers.SerializerMethodField()
+
+#     class Meta:
+#         model = User
+#         fields = ['full_name', 'email', 'contact_number', 'role']  # Only include the desired fields
+
+#     def get_full_name(self, obj):
+#         return f"{obj.first_name} {obj.last_name}"
+
 class UserProfileSerializer(serializers.ModelSerializer):
-    full_name = serializers.SerializerMethodField()
+#     # full_name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['full_name', 'email', 'contact_number', 'role']  # Only include the desired fields
+        fields = ['username', 'email', 'contact_number', 'role', 'station', 'station_address', 'department_id']  # Only include the desired fields
 
-    def get_full_name(self, obj):
-        return f"{obj.first_name} {obj.last_name}"
+    # def get_full_name(self, obj):
+    #     return f"{obj.first_name} {obj.last_name}"
 
 
 class GetWorkerSerializer(serializers.ModelSerializer):
