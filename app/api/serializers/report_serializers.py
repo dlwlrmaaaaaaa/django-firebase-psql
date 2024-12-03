@@ -79,7 +79,6 @@ class AddReportSerializer(serializers.ModelSerializer):
                 user_ids = duplicate_report.get('user_ids', [])
                 if isinstance(user_ids, str):
                     try:
-                        # Convert string representation of list into a proper list
                         user_ids = eval(user_ids)
                     except:
                         raise serializers.ValidationError({
@@ -110,7 +109,6 @@ class AddReportSerializer(serializers.ModelSerializer):
                             doc_ref = db.collection(collection_path).document(document_id)
                             report_ref = doc_ref.collection('reports').document(report_id)
 
-                            # Fetch the existing report to append user_id
                             existing_report = report_ref.get()
                             if existing_report.exists:
                                 existing_data = existing_report.to_dict()
@@ -144,8 +142,61 @@ class AddReportSerializer(serializers.ModelSerializer):
                             "detail": "A similar report already exists.",
                             "existing_report": duplicate_report
                         })
-
+            print("isEmeregency1: ", validated_data['is_emergency'])           
+            if validated_data['is_emergency'] == 'emergency':
+                print("isEmergency: ", validated_data['is_emergency'])  # Debugging
                 
+                # Extract data from validated_data
+                report_lat = validated_data['latitude']
+                report_lon = validated_data['longitude']
+                report_type = validated_data['type_of_report']
+                print(f"Report details - Latitude: {report_lat}, Longitude: {report_lon}, Type: {report_type}")  # Debugging
+
+                # Map report type to department ID
+                report_type_to_department_id = {
+                    "Fires": 1,
+                    "Floods": 6,
+                    "Road Accident": 6,
+                }
+                target_department_id = report_type_to_department_id.get(report_type)
+                print(f"Target Department ID: {target_department_id}")  # Debugging
+
+                if not target_department_id:
+                    raise serializers.ValidationError({"detail": f"Unknown report type: {report_type}"})
+
+                # Filter for department admins
+                department_admins = User.objects.filter(
+                    role='department_admin',
+                    department_id=target_department_id
+                )
+                print(f"Found {department_admins.count()} department admins for type '{report_type}'.")  # Debugging
+
+                nearest_admin = None
+                min_distance = float('inf')
+
+                for admin in department_admins:
+                    print(f"Checking admin: {admin.username}, Station Address: {admin.station_address}")  # Debugging
+                    if admin.station_address:  # Ensure the admin has station coordinates
+                        try:
+                            station_lat, station_lon = map(float, admin.station_address.split(','))
+                            print(f"Admin Station - Latitude: {station_lat}, Longitude: {station_lon}")  # Debugging
+                            distance = self.calculate_distance(report_lat, report_lon, station_lat, station_lon)
+                            print(f"Distance to admin {admin.username}: {distance}")  # Debugging
+
+                            if distance < min_distance:
+                                min_distance = distance
+                                nearest_admin = admin
+                                print(f"Nearest admin updated to: {admin.username} with distance: {min_distance}")  # Debugging
+                        except ValueError as e:
+                            print(f"Error parsing station address for admin {admin.username}: {e}")  # Debugging
+
+                if nearest_admin:
+                    print(f"Nearest admin selected: {nearest_admin.username}, Department ID: {nearest_admin.department_id}")  # Debugging
+                    validated_data['assigned_to_id'] = nearest_admin.id
+                else:
+                    print("No suitable admin found.")
+
+                                    
             report_uuid = uuid.uuid4()
             image_path_string = ''
             if 'image_path' in validated_data and validated_data['image_path']:
@@ -194,7 +245,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 'floor_number': validated_data['floor_number'],
                 'is_validated': False,
                 'update_date': datetime.now().isoformat(),
-                'assigned_to_id': validated_data.get('assigned_id'),
+                'assigned_to_id': validated_data.get('assigned_to_id'),
                 'report_count': validated_data.get('report_count', 1),
                 'usernames': [validated_data.get('username', user.username)],
                 'user_ids': [validated_data.get('user_id', user.id)]
@@ -227,7 +278,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 custom_type=validated_data['custom_type'],
                 floor_number=validated_data['floor_number'],
                 report_date=datetime.now(),
-                assigned_to_id=validated_data.get('assigned_id'),
+                assigned_to_id=validated_data.get('assigned_to_id'),
             )
             report.save()
             print(report)
