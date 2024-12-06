@@ -122,7 +122,7 @@ DATABASES = {
     }
 }
 
-# DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_user:fjhpNQohlSlkANEP9LgpRnBDjAIulvhI@dpg-ct1cm768ii6s73feka0g-a.singapore-postgres.render.com/crisp_postgresql_db')
+DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_user:fjhpNQohlSlkANEP9LgpRnBDjAIulvhI@dpg-ct1cm768ii6s73feka0g-a.singapore-postgres.render.com/crisp_postgresql_db')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

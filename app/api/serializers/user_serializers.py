@@ -101,46 +101,62 @@ class DepartmentList(serializers.ModelSerializer):
         fields = '__all__'
     
 class DepartmentAdminSerializer(serializers.ModelSerializer):
-
     email = serializers.EmailField(
         required=True,
-        validators=[UniqueValidator(queryset=User.objects.all())]
+        validators=[UniqueValidator(queryset=User.objects.all(), message="This email is already in use.")],
+        error_messages={"required": "Email is required."}
     )
     password = serializers.CharField(
         write_only=True, 
         required=True, 
         validators=[validate_password], 
-        style={'input_type': 'password'}
+        style={'input_type': 'password'},
+        error_messages={
+            "required": "Password is required.",
+            "blank": "Password cannot be empty."
+        }
     )
     password_confirm = serializers.CharField(
         write_only=True, 
         required=True, 
-        style={'input_type': 'password'}
+        style={'input_type': 'password'},
+        error_messages={
+            "required": "Password confirmation is required.",
+            "blank": "Password confirmation cannot be empty."
+        }
     )
+
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'department', 'contact_number', 'station','station_address']
+        fields = ['username', 'email', 'password', 'password_confirm', 'department', 'contact_number', 'station', 'station_address']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({"password": "Password fields did not match." })
+            raise serializers.ValidationError({
+                "password_confirm": "Passwords do not match."
+            })
         return attrs
-    
+
     def create(self, validated_data):
         validated_data.pop('password_confirm')
 
-        user = User.objects.create(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            department=validated_data.get('department'),
-            contact_number=validated_data.get('contact_number'),
-            station_address=validated_data.get('station_address'),
-            station=validated_data.get('station'),
-            is_verified=True,
-            role='department_admin'
-        )
-        user.set_password(validated_data['password'])
-        user.save()
+        try:
+            user = User.objects.create(
+                username=validated_data['username'],
+                email=validated_data['email'],
+                department=validated_data.get('department'),
+                contact_number=validated_data.get('contact_number'),
+                station_address=validated_data.get('station_address'),
+                station=validated_data.get('station'),
+                is_verified=True,
+                role='department_admin'
+            )
+            user.set_password(validated_data['password'])
+            user.save()
+        except Exception as e:
+            raise serializers.ValidationError({
+                "non_field_errors": f"An unexpected error occurred: {str(e)}"
+            })
 
         return user
     

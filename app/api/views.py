@@ -32,6 +32,7 @@ import joblib
 import pandas as pd
 import os
 import gdown
+import uuid
 User = get_user_model()
 
 import os
@@ -180,6 +181,48 @@ class CitizenRegitsration(generics.CreateAPIView):
         recipient_list = [email]
 
         send_mail(subject, message, from_email, recipient_list, html_message=message)
+
+class SendAdminVerificationEmail(generics.CreateAPIView):
+    permission_classes = [AllowAny]
+
+    def send_admin_verification_email(self, email, token):
+        subject = "Verify your email"
+        FRONTEND_URL = "http://localhost:5173"
+        verification_link = f"{FRONTEND_URL}/verify-email/{token}"
+        message = (
+            f"<html>"
+            f"<body>"
+            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
+            f"<p style='text-align: center; font-size: 0.85em; '>Click the button below to verify your account:</p>"
+            f"<p style='text-align: center;'><a href='{verification_link}' style='font-weight: bolder; color: #ffffff; background-color: #0C3B2D; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Verify Account</a></p>"
+            f"<p style='text-align: center; font-size: 0.75em; '>If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
+            f"</body>"
+            f"</html>"
+        )
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [email]
+
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
+
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        user = get_object_or_404(User, email=email)
+        token = str(uuid.uuid4())
+        user.verification_token = token
+        user.save()
+        self.send_admin_verification_email(email, token)
+        return Response({"message": "Verification email sent."})
+
+class VerifyEmailView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, token, *args, **kwargs):
+        user = get_object_or_404(User, verification_token=token)
+        user.is_verified = True
+        user.verification_token = None
+        user.save()
+        return Response({"message": "Email verified successfully."})
     
 class ResendOtp(generics.UpdateAPIView):
     permission_classes = [AllowAny]
@@ -475,9 +518,10 @@ class GetWorkerViewSet(generics.GenericAPIView):
         user = self.request.user
         if not user.department:
             return User.objects.none()
-
+        
         return User.objects.filter(
             role__in=["worker"], 
             department=user.department
         )
+
 

@@ -193,8 +193,12 @@ class AddReportSerializer(serializers.ModelSerializer):
                 if nearest_admin:
                     print(f"Nearest admin selected: {nearest_admin.username}, Department ID: {nearest_admin.department_id}")  # Debugging
                     validated_data['assigned_to_id'] = nearest_admin.id
+                    validated_data['status'] = "Ongoing"
                 else:
                     print("No suitable admin found.")
+            else:
+                validated_data.get['status'] = "Pending"
+
 
                                     
             report_uuid = uuid.uuid4()
@@ -238,7 +242,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 'location': validated_data['location'],
                 'upvote': 0,
                 'downvote': 0,
-                'status': "Pending",
+                'status': validated_data.get('status'),
                 'report_date': datetime.now().isoformat(),
                 'image_path': image_path_string,
                 'custom_type': validated_data['custom_type'],
@@ -274,7 +278,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 location=validated_data['location'],
                 upvote=0,
                 downvote=0,
-                status="Pending",
+                status=validated_data.get('status'),
                 custom_type=validated_data['custom_type'],
                 floor_number=validated_data['floor_number'],
                 report_date=datetime.now(),
