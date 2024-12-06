@@ -475,7 +475,7 @@ class GetWorkerViewSet(generics.GenericAPIView):
         user = self.request.user
         if not user.department:
             return User.objects.none()
-
+        
         return User.objects.filter(
             role__in=["worker"], 
             department=user.department
