@@ -444,7 +444,6 @@ class VerifyEmailView(APIView):
         except Exception as e:
             return Response({"error": "Invalid request."}, status=400)
 
-
 class DepartmentListView(generics.ListAPIView):
     permission_classes = [IsSuperAdmin]
     queryset = Department.objects.all()
