@@ -386,6 +386,29 @@ class WorkerRegistration(generics.CreateAPIView):
         send_mail(subject, message, from_email, recipient_list, html_message=message)
 
 
+class VerifyWorkerEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        uid = request.GET.get('uid')
+        token = request.GET.get('token')
+
+        try:
+            # Decode the user ID
+            user_id = urlsafe_base64_decode(uid).decode()
+            user = get_object_or_404(User, pk=user_id)
+
+            # Check if the token is valid
+            if default_token_generator.check_token(user, token):
+                user.is_verified = True
+                user.save()
+                return Response({"message": "Your email has been verified!"}, status=200)
+
+            return Response({"error": "Invalid or expired token."}, status=400)
+
+        except Exception as e:
+            return Response({"error": "Invalid request."}, status=400)
+
 class DepartmentListView(generics.ListAPIView):
     permission_classes = [IsSuperAdmin]
     queryset = Department.objects.all()
