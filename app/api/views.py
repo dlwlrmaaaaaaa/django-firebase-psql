@@ -337,7 +337,6 @@ class WorkerRegistration(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
 
-<<<<<<< HEAD
         # Check if the serializer is valid
         if not serializer.is_valid():
             return Response(serializer.errors, status=400)
@@ -378,77 +377,14 @@ class WorkerRegistration(generics.CreateAPIView):
             f"<p style='text-align: center;'><a href='{link}' style='font-weight: bold; color: #1D70B8;'>{link}</a></p>"
             f"<p style='text-align: center; font-size: 0.75em;'>This link is valid for 24 hours. If you did not request this, please ignore this email.</p>"
             f"<p style='text-align: left; font-size: 0.75em;'>Best regards,<br>The CRISP Team</p>"
-=======
-    def create(self, request, *args, **kwargs):
-        print("Request data:", request.data)
-        serializer = self.get_serializer(data=request.data)
-        # Check if the serializer is valid
-        # Check if the serializer is valid
-        if not serializer.is_valid():
-            print("Validation errors:", serializer.errors)  # Log the errors
-            return Response(serializer.errors, status=400)
-        try:
-            user = serializer.save()
-
-            otp = random.randint(100000, 999999)
-            user.otp = str(otp)
-            user.save()
-
-            self.send_verification_email(user.email, otp)
-
-        except Exception as e:
-            print("Error during user creation or email sending:", str(e))  # Log the error
-            return Response({"error": "Internal server error", "details": str(e)}, status=500)
-
-        return redirect('verify')
-    
-    def send_verification_email(self, email, otp):
-        subject = "Verify your email"
-        message = (
-            f"<html>"
-            f"<body>"
-            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
-            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
-            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
-            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
-            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
->>>>>>> main
             f"</body>"
             f"</html>"
         )
         from_email = settings.DEFAULT_FROM_EMAIL
         recipient_list = [email]
 
-<<<<<<< HEAD
-        send_mail(subject, "", from_email, recipient_list, html_message=message)
-
-class VerifyEmailView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request, *args, **kwargs):
-        uid = request.GET.get('uid')
-        token = request.GET.get('token')
-
-        try:
-            # Decode the user ID
-            user_id = urlsafe_base64_decode(uid).decode()
-            user = get_object_or_404(User, pk=user_id)
-
-            # Check if the token is valid
-            if default_token_generator.check_token(user, token):
-                user.is_verified = True
-                user.is_email_verified = True
-                user.save()
-                return Response({"message": "Your email has been verified!"}, status=200)
-
-            return Response({"error": "Invalid or expired token."}, status=400)
-
-        except Exception as e:
-            return Response({"error": "Invalid request."}, status=400)
-=======
         send_mail(subject, message, from_email, recipient_list, html_message=message)
 
->>>>>>> main
 
 class DepartmentListView(generics.ListAPIView):
     permission_classes = [IsSuperAdmin]
