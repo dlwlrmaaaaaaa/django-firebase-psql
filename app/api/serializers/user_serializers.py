@@ -180,7 +180,7 @@ class WorkerSerializers(serializers.ModelSerializer):
     )
     class Meta:
         model = User
-        fields = ['username', 'email', 'contact_number', 'department', 'station', 'station_address', 'address', 'password', 'password_confirm']
+        fields = ['username', 'email', 'contact_number', 'department', 'station', 'station_address', 'address', 'password', 'password_confirm', 'is_verified']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -200,11 +200,15 @@ class WorkerSerializers(serializers.ModelSerializer):
             station_address=validated_data.get('station_address'),
             address=validated_data.get('address'),
             supervisor_id=supervisor.id,
-            is_verified=True,
+            is_verified=False,
             role='worker',
         )
         user.set_password(validated_data['password'])
+        user.is_email_verified = False  # Mark as unverified initially
+
         user.save()
+
+        
 
         return user
 
