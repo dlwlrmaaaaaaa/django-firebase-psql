@@ -180,7 +180,7 @@ class WorkerSerializers(serializers.ModelSerializer):
     )
     class Meta:
         model = User
-        fields = ['username', 'email', 'contact_number', 'department', 'station', 'station_address', 'address', 'password', 'password_confirm', 'is_verified']
+        fields = ['username', 'email', 'contact_number', 'department', 'station', 'station_address', 'password', 'password_confirm', 'is_verified']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:

@@ -335,20 +335,21 @@ class DepartmentRegistration(generics.CreateAPIView):
 class WorkerRegistration(generics.CreateAPIView):
     permission_classes = [IsDepartmentAdmin]
     serializer_class = WorkerSerializers
-    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        department_admin = self.request.user
+        station_address = department_admin.station_address
 
         # Check if the serializer is valid
         if not serializer.is_valid():
             return Response(serializer.errors, status=400)
 
         try:
-            # Save the department admin user
-            user = serializer.save()
+            # Create the worker user and set the address from the department admin
+            user = serializer.save(station_address=station_address)
             user.is_verified = False  # Ensure the account is not verified yet
-            user.save()
+            user.save()  # Save the user after assigning the address
 
             # Generate a verification link
             verification_link = self.generate_verification_link(user)
