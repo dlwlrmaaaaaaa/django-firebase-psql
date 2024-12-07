@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import GetWorkerViewSet,FirePredictionView, AcceptVerifyAccount, ResendOtp, DepartmentListView,MyTokenObtainPairView, SomeView, MyRefreshTokenPair, CitizenRegitsration, DeleteReportView, DepartmentRegistration, WorkerRegistration, ReportView, OTPVerificationView, UpdateReportView, UserProfileView, VerifyPasswordView, ChangePasswordView, VerifyAccountView
+from .views import GetWorkerViewSet,FirePredictionView, AcceptVerifyAccount, ResendOtp, DepartmentListView,MyTokenObtainPairView, SendAdminVerificationEmail, SomeView, MyRefreshTokenPair, CitizenRegitsration, DeleteReportView, DepartmentRegistration, VerifyEmailView, WorkerRegistration, ReportView, OTPVerificationView, UpdateReportView, UserProfileView, VerifyPasswordView, ChangePasswordView, VerifyAccountView
 from rest_framework.routers import DefaultRouter
 
 
@@ -32,6 +32,8 @@ urlpatterns = [
     path('citizen/registration/', CitizenRegitsration.as_view(), name='citizen_registration'),
     path('department_admin/registration/', DepartmentRegistration.as_view(), name='admin_registration'),
     path('worker/registration/', WorkerRegistration.as_view(), name='worker_registration'),
+    path('send-admin-verification-email/', SendAdminVerificationEmail.as_view(), name='send_admin_verification_email'),
+    path('verify-email/<str:token>/', VerifyEmailView.as_view(), name='verify_email'),
 
     ### For reports
     path('create-report/', ReportView.as_view(), name='create-report'),
@@ -51,6 +53,7 @@ urlpatterns = [
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
 
     path('verify-account/', VerifyAccountView.as_view(), name='verify-account'),
+    
 
     ##Department List View
     path('departments/', DepartmentListView.as_view(), name='departments'),
@@ -58,6 +61,8 @@ urlpatterns = [
     path('worker/profile', GetWorkerViewSet.as_view(), name='worker_profile'),
 
     path('verify-user/<int:pk>/', AcceptVerifyAccount.as_view(), name='verify-user'),
+    
+    path('api/departments/', DepartmentListView.as_view(), name='api_department'),
 
     path('', include(router.urls)),  # Add this line to include the viewsets
 

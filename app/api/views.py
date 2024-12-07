@@ -32,6 +32,7 @@ import joblib
 import pandas as pd
 import os
 import gdown
+import uuid
 User = get_user_model()
 
 import os
@@ -180,6 +181,48 @@ class CitizenRegitsration(generics.CreateAPIView):
         recipient_list = [email]
 
         send_mail(subject, message, from_email, recipient_list, html_message=message)
+
+class SendAdminVerificationEmail(generics.CreateAPIView):
+    permission_classes = [AllowAny]
+
+    def send_admin_verification_email(self, email, token):
+        subject = "Verify your email"
+        FRONTEND_URL = "http://localhost:5173"
+        verification_link = f"{FRONTEND_URL}/verify-email/{token}"
+        message = (
+            f"<html>"
+            f"<body>"
+            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
+            f"<p style='text-align: center; font-size: 0.85em; '>Click the button below to verify your account:</p>"
+            f"<p style='text-align: center;'><a href='{verification_link}' style='font-weight: bolder; color: #ffffff; background-color: #0C3B2D; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Verify Account</a></p>"
+            f"<p style='text-align: center; font-size: 0.75em; '>If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
+            f"</body>"
+            f"</html>"
+        )
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [email]
+
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
+
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        user = get_object_or_404(User, email=email)
+        token = str(uuid.uuid4())
+        user.verification_token = token
+        user.save()
+        self.send_admin_verification_email(email, token)
+        return Response({"message": "Verification email sent."})
+
+class VerifyEmailView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, token, *args, **kwargs):
+        user = get_object_or_404(User, verification_token=token)
+        user.is_verified = True
+        user.verification_token = None
+        user.save()
+        return Response({"message": "Email verified successfully."})
     
 class ResendOtp(generics.UpdateAPIView):
     permission_classes = [AllowAny]
@@ -197,6 +240,7 @@ class ResendOtp(generics.UpdateAPIView):
         user.save()
         
         CitizenRegitsration.send_verification_email(self, user.email, otp)
+        WorkerRegistration.send_verification_email(self, user.email, otp)
 
         return Response({"message": "OTP resent successfully"}, status=200)
 
@@ -208,6 +252,47 @@ class WorkerRegistration(generics.CreateAPIView):
     permission_classes = [IsDepartmentAdmin]
     serializer_class = WorkerSerializers
     permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        print("Request data:", request.data)
+        serializer = self.get_serializer(data=request.data)
+        # Check if the serializer is valid
+        # Check if the serializer is valid
+        if not serializer.is_valid():
+            print("Validation errors:", serializer.errors)  # Log the errors
+            return Response(serializer.errors, status=400)
+        try:
+            user = serializer.save()
+
+            otp = random.randint(100000, 999999)
+            user.otp = str(otp)
+            user.save()
+
+            self.send_verification_email(user.email, otp)
+
+        except Exception as e:
+            print("Error during user creation or email sending:", str(e))  # Log the error
+            return Response({"error": "Internal server error", "details": str(e)}, status=500)
+
+        return redirect('verify')
+    
+    def send_verification_email(self, email, otp):
+        subject = "Verify your email"
+        message = (
+            f"<html>"
+            f"<body>"
+            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
+            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
+            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
+            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
+            f"</body>"
+            f"</html>"
+        )
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [email]
+
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
 
 
 class DepartmentListView(generics.ListAPIView):
@@ -460,7 +545,7 @@ class WorkersViewSet(viewsets.ReadOnlyModelViewSet):
 
 class UsersViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UsersSerializer
-    permission_classes = [IsSuperAdmin]
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
 
@@ -480,4 +565,5 @@ class GetWorkerViewSet(generics.GenericAPIView):
             role__in=["worker"], 
             department=user.department
         )
+
 
