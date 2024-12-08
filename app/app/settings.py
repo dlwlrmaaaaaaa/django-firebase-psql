@@ -181,6 +181,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.1.17:8081",
     'http://192.168.100.15:8081',
     'http://192.168.254.179:8081',
+    "http://localhost:5173"
 ]
 CORS_ORIGIN_WHITELIST = [
     'http://192.168.1.191:8081',
