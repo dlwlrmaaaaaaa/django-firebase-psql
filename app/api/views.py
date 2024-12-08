@@ -197,8 +197,14 @@ class CitizenRegitsration(generics.CreateAPIView):
             return Response(
                 {"error": "Internal server error", "details": str(e)}, status=500
             )
-
-        return redirect("verify")
+        return Response(
+            {
+                "message": "User registered successfully. Please check your email for the OTP verification.",
+                "user_id": user.id,
+                "email": user.email
+            },
+            status=status.HTTP_201_CREATED  
+        )
 
     def send_verification_email(self, email, otp):
         subject = "Verify your email"
