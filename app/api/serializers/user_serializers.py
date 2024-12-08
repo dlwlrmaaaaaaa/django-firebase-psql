@@ -191,7 +191,7 @@ class WorkerSerializers(serializers.ModelSerializer):
         validated_data.pop('password_confirm')
         supervisor = self.context['request'].user
     
-        user = User.objects.create(
+        user = User(
             username=validated_data['username'],
             email=validated_data['email'],
             contact_number=validated_data.get('contact_number'),
@@ -200,11 +200,12 @@ class WorkerSerializers(serializers.ModelSerializer):
             station_address=validated_data.get('station_address'),
             address=validated_data.get('address'),
             supervisor_id=supervisor.id,
-            is_verified=False,
+            is_verified=True,
             role='worker',
-        )
+        )      
+        print("Registration Data: ", validated_data)
         user.set_password(validated_data['password'])
-        user.is_email_verified = False  # Mark as unverified initially
+        user.is_email_verified = False 
 
         user.save()
 
@@ -212,33 +213,59 @@ class WorkerSerializers(serializers.ModelSerializer):
 
         return user
 
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        username_or_email = attrs.get('username')
+        print("Starting token validation...")
+
+        # Debug the incoming attributes
+        print(f"Attributes received: {attrs}")
+
+        username = attrs.get('username')
+        username_or_email = User.objects.get(email=username)
         password = attrs.get('password')
+
+        # Check if username and password are present
+        if not username_or_email or not password:
+            print(f"Missing credentials: username_or_email={username_or_email}, password={password}")
+            raise ValidationError({"detail": "Both username/email and password are required."}, 
+                                  code=status.HTTP_400_BAD_REQUEST)
+
+        # Try to authenticate the user
+        print(f"Attempting to authenticate user: {username_or_email}")
         user = authenticate(
             request=self.context.get('request'),
             username=username_or_email,
             password=password
         )
 
+        # Debug the result of authentication
         if not user:
+            print(f"Authentication failed for user: {username_or_email}")
             raise ValidationError(
                 {"detail": "Invalid credentials. Please try again."},
                 code=status.HTTP_401_UNAUTHORIZED
             )
 
         if not user.is_active:
+            print(f"Inactive user attempted login: {username_or_email}")
             raise ValidationError(
                 {"detail": "User account is disabled."},
                 code=status.HTTP_403_FORBIDDEN
             )
+
+        # Log successful authentication
+        print(f"User authenticated successfully: {user}")
 
         self.user = user
         data = super().validate(attrs)
 
         # Add custom fields to the response
         account_type = get_account_type(self.user)
+
+        # Debug user data before updating response
+        print(f"Populating custom user data for: {self.user.username}")
+        print(f"Account type: {account_type}")
 
         data.update({
             'user_id': self.user.id,
@@ -254,12 +281,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         })
 
         if account_type in ['department_admin', 'worker']:
+            print(f"Adding department and supervisor details for: {self.user.username}")
             data.update({
                 'department': str(self.user.department_id) if self.user.department else None,
                 'supervisor': str(self.user.supervisor_id) if self.user.supervisor_id else None,
                 'station_address': getattr(self.user, 'station_address', None),
                 'station': getattr(self.user, 'station', None),
             })
+
+        # Log final response data
+        print(f"Token response data for user {self.user.username}: {data}")
 
         return data
 
