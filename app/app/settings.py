@@ -111,6 +111,7 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 import dj_database_url
 
+database_url = os.environ.get("DATABASE_URI")
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -122,7 +123,7 @@ DATABASES = {
     }
 }
 
-DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_user:fjhpNQohlSlkANEP9LgpRnBDjAIulvhI@dpg-ct1cm768ii6s73feka0g-a.singapore-postgres.render.com/crisp_postgresql_db')
+DATABASES['default'] = dj_database_url.parse(database_url)
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
