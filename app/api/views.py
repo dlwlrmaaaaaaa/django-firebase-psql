@@ -3,15 +3,28 @@ from django.contrib.auth.models import User
 from rest_framework import generics, viewsets
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .serializers.user_serializers import CustomTokenObtainPairSerializer, CustomTokenRefreshSerializer
+from .serializers.user_serializers import (
+    CustomTokenObtainPairSerializer,
+    CustomTokenRefreshSerializer,
+)
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated 
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
-from .serializers.user_serializers import DepartmentList, CitizenSerializer, GetWorkerSerializer, UserProfileSerializer, DepartmentAdminSerializer, VerifyPasswordSerializer, ChangePasswordSerializer, WorkerSerializers, UsersSerializer
+from .serializers.user_serializers import (
+    DepartmentList,
+    CitizenSerializer,
+    GetWorkerSerializer,
+    UserProfileSerializer,
+    DepartmentAdminSerializer,
+    VerifyPasswordSerializer,
+    ChangePasswordSerializer,
+    WorkerSerializers,
+    UsersSerializer,
+)
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .serializers.fire_serializer import FirePredictionSerializer
 from .models import Report
@@ -33,6 +46,7 @@ import pandas as pd
 import os
 import gdown
 import uuid
+
 User = get_user_model()
 
 import os
@@ -48,6 +62,7 @@ import logging
 # Set up logging
 logger = logging.getLogger(__name__)
 
+
 class FirePredictionView(generics.CreateAPIView):
     serializer_class = FirePredictionSerializer
 
@@ -55,7 +70,7 @@ class FirePredictionView(generics.CreateAPIView):
 
     def load_model(self):
         # Use BASE_DIR for path construction to ensure proper path resolution
-        model_path = os.path.join(settings.BASE_DIR, 'best_rf_model2.pkl')
+        model_path = os.path.join(settings.BASE_DIR, "best_rf_model2.pkl")
 
         # Log the model path to help debug
         logger.info(f"Attempting to load model from: {model_path}")
@@ -79,7 +94,10 @@ class FirePredictionView(generics.CreateAPIView):
             self.load_model()
 
         if self.best_rf_model is None:
-            return Response({"error": "Model file could not be loaded"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": "Model file could not be loaded"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         # Serialize and process input data
         serializer = self.get_serializer(data=request.data)
@@ -90,18 +108,18 @@ class FirePredictionView(generics.CreateAPIView):
 
         # Rename columns to match the model's training data
         column_renames = {
-            "Wind": 'Wind (km/h)',
-            'Barometer': 'Barometer (mbar)',
-            'Precipitation': 'Precipitation (%)',
-            'Temperature': 'Temperature (°C)',
-            'Weather_Heavy_rain': 'Weather_Heavy rain',
-            'Weather_Light_rain': 'Weather_Light rain',
+            "Wind": "Wind (km/h)",
+            "Barometer": "Barometer (mbar)",
+            "Precipitation": "Precipitation (%)",
+            "Temperature": "Temperature (°C)",
+            "Weather_Heavy_rain": "Weather_Heavy rain",
+            "Weather_Light_rain": "Weather_Light rain",
             # Add other necessary renames here
-            'Weather_Partly_sunny': 'Weather_Partly sunny',
-            'Weather_Passing_clouds': 'Weather_Passing clouds',
-            'Weather_Scattered_clouds': 'Weather_Scattered clouds',
-            'Weather_Thunderstorms_dot': 'Weather_Thunderstorms.',
-            'Wind_kmh': 'Wind (km/h)',
+            "Weather_Partly_sunny": "Weather_Partly sunny",
+            "Weather_Passing_clouds": "Weather_Passing clouds",
+            "Weather_Scattered_clouds": "Weather_Scattered clouds",
+            "Weather_Thunderstorms_dot": "Weather_Thunderstorms.",
+            "Wind_kmh": "Wind (km/h)",
             # Add other mappings as needed
         }
         sample_df.rename(columns=column_renames, inplace=True)
@@ -109,38 +127,42 @@ class FirePredictionView(generics.CreateAPIView):
         # Predict the severity level
         try:
             prediction = self.best_rf_model.predict(sample_df)
-            predicted_label = ['low', 'moderate', 'high', 'severe']
+            predicted_label = ["low", "moderate", "high", "severe"]
             result = predicted_label[prediction[0]]
 
             return Response({"prediction": result}, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class AssignRoleView(generics.CreateAPIView):
-    permission_classes = [IsAuthenticated, IsSuperAdmin]  # Only super admins can assign roles
+    permission_classes = [
+        IsAuthenticated,
+        IsSuperAdmin,
+    ]  # Only super admins can assign roles
 
     def post(self, request, user_id):
         try:
             user = User.objects.get(pk=user_id)
-            new_role = request.data.get('role')
+            new_role = request.data.get("role")
 
-            if new_role in ['super_admin', 'department_admin']:
+            if new_role in ["super_admin", "department_admin"]:
                 user.role = new_role
                 user.save()
-                return Response({'message': f'Role updated to {new_role}'}, status=200)
+                return Response({"message": f"Role updated to {new_role}"}, status=200)
             else:
-                return Response({'error': 'Invalid role'}, status=400)
+                return Response({"error": "Invalid role"}, status=400)
 
         except User.DoesNotExist:
-            return Response({'error': 'User not found'}, status=404)
-
+            return Response({"error": "User not found"}, status=404)
 
 
 class CitizenRegitsration(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = CitizenSerializer
-    
+
     def create(self, request, *args, **kwargs):
         print("Request data:", request.data)
         serializer = self.get_serializer(data=request.data)
@@ -159,11 +181,15 @@ class CitizenRegitsration(generics.CreateAPIView):
             self.send_verification_email(user.email, otp)
 
         except Exception as e:
-            print("Error during user creation or email sending:", str(e))  # Log the error
-            return Response({"error": "Internal server error", "details": str(e)}, status=500)
+            print(
+                "Error during user creation or email sending:", str(e)
+            )  # Log the error
+            return Response(
+                {"error": "Internal server error", "details": str(e)}, status=500
+            )
 
-        return redirect('verify')
-    
+        return redirect("verify")
+
     def send_verification_email(self, email, otp):
         subject = "Verify your email"
         message = (
@@ -182,20 +208,66 @@ class CitizenRegitsration(generics.CreateAPIView):
 
         send_mail(subject, message, from_email, recipient_list, html_message=message)
 
-class SendAdminVerificationEmail(generics.CreateAPIView):
+
+class ResendOtp(generics.UpdateAPIView):
     permission_classes = [AllowAny]
 
-    def send_admin_verification_email(self, email, token):
+    def post(self, request, *args, **kwargs):
+        email = request.data.get("email")
+
+        try:
+            user = User.objects.get(email=email, is_verified=False)
+        except User.DoesNotExist:
+            return Response({"error": "User not found or already verified"}, status=404)
+        otp = random.randint(100000, 999999)
+        user.otp = otp
+        user.otp_created_at = timezone.now()
+        user.save()
+
+        CitizenRegitsration.send_verification_email(self, user.email, otp)
+
+        return Response({"message": "OTP resent successfully"}, status=200)
+    
+class CitizenRegitsration(generics.CreateAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = CitizenSerializer
+
+    def create(self, request, *args, **kwargs):
+        print("Request data:", request.data)
+        serializer = self.get_serializer(data=request.data)
+        # Check if the serializer is valid
+        # Check if the serializer is valid
+        if not serializer.is_valid():
+            print("Validation errors:", serializer.errors)  # Log the errors
+            return Response(serializer.errors, status=400)
+        try:
+            user = serializer.save()
+
+            otp = random.randint(100000, 999999)
+            user.otp = str(otp)
+            user.save()
+
+            self.send_verification_email(user.email, otp)
+
+        except Exception as e:
+            print(
+                "Error during user creation or email sending:", str(e)
+            )  # Log the error
+            return Response(
+                {"error": "Internal server error", "details": str(e)}, status=500
+            )
+
+        return redirect("verify")
+
+    def send_verification_email(self, email, otp):
         subject = "Verify your email"
-        FRONTEND_URL = "http://localhost:5173"
-        verification_link = f"{FRONTEND_URL}/verify-email/{token}"
         message = (
             f"<html>"
             f"<body>"
             f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
-            f"<p style='text-align: center; font-size: 0.85em; '>Click the button below to verify your account:</p>"
-            f"<p style='text-align: center;'><a href='{verification_link}' style='font-weight: bolder; color: #ffffff; background-color: #0C3B2D; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Verify Account</a></p>"
-            f"<p style='text-align: center; font-size: 0.75em; '>If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
+            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
+            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
             f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
             f"</body>"
             f"</html>"
@@ -205,44 +277,44 @@ class SendAdminVerificationEmail(generics.CreateAPIView):
 
         send_mail(subject, message, from_email, recipient_list, html_message=message)
 
-    def post(self, request, *args, **kwargs):
-        email = request.data.get('email')
-        user = get_object_or_404(User, email=email)
-        token = str(uuid.uuid4())
-        user.verification_token = token
-        user.save()
-        self.send_admin_verification_email(email, token)
-        return Response({"message": "Verification email sent."})
-
-class VerifyEmailView(generics.GenericAPIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request, token, *args, **kwargs):
-        user = get_object_or_404(User, verification_token=token)
-        user.is_verified = True
-        user.verification_token = None
-        user.save()
-        return Response({"message": "Email verified successfully."})
-    
-class ResendOtp(generics.UpdateAPIView):
+class ResendOtpDepartment(generics.UpdateAPIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        email = request.data.get('email')
-        
+        email = request.data.get("email")
+
         try:
-          user = User.objects.get(email=email, is_verified=False)
+            user = User.objects.get(email=email, is_email_verified=False)
         except User.DoesNotExist:
             return Response({"error": "User not found or already verified"}, status=404)
+        
         otp = random.randint(100000, 999999)
         user.otp = otp
-        user.otp_created_at = timezone.now()  
+        user.otp_created_at = timezone.now()
         user.save()
-        
-        CitizenRegitsration.send_verification_email(self, user.email, otp)
-        WorkerRegistration.send_verification_email(self, user.email, otp)
+
+        self.send_verification_email(user.email, otp)
 
         return Response({"message": "OTP resent successfully"}, status=200)
+
+    def send_verification_email(self, email, otp):
+        subject = "Verify your email"
+        message = (
+            f"<html>"
+            f"<body>"
+            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
+            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
+            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
+            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
+            f"</body>"
+            f"</html>"
+        )
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [email]
+
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
+
 
 class DepartmentRegistration(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsSuperAdmin]
@@ -300,40 +372,54 @@ class DepartmentListView(generics.ListAPIView):
     queryset = Department.objects.all()
     serializer_class = DepartmentList
 
+
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
+
 class MyRefreshTokenPair(TokenRefreshView):
     serializer_class = CustomTokenRefreshSerializer
-    
+
+
 class ReportView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsCitizen]
     serializer_class = AddReportSerializer
+
 
 class DeleteReportView(generics.DestroyAPIView):
     query_set = Report.objects.all()
     permission_class = [IsCitizen, IsSuperAdmin]
 
     def get_object(self):
-        report_id = self.kwargs.get('report_id')
+        report_id = self.kwargs.get("report_id")
         return get_object_or_404(Report, report_id=report_id)
-    
+
     def delete(self, request, *args, **kwargs):
         report = self.get_object()
 
         # SuperAdmin role can delete any report
         if report.user_id != request.user.id:
-            return Response({"error": "You are not authorized to delete this report."}, status=status.HTTP_403_FORBIDDEN)
-        
-        if request.user.role.lower() == 'super_admin' or 'superadmin':
-            report.delete()
-            return Response({"message": "Report deleted successfully."}, status=status.HTTP_200_OK)
-        
-        if request.user.role.lower() == 'citizen':
-            report.delete()
-            return Response({"message": "Your report has been deleted successfully."}, status=status.HTTP_200_OK)
+            return Response(
+                {"error": "You are not authorized to delete this report."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
-        raise PermissionDenied({"error": "You do not have permission to delete this report."})
+        if request.user.role.lower() == "super_admin" or "superadmin":
+            report.delete()
+            return Response(
+                {"message": "Report deleted successfully."}, status=status.HTTP_200_OK
+            )
+
+        if request.user.role.lower() == "citizen":
+            report.delete()
+            return Response(
+                {"message": "Your report has been deleted successfully."},
+                status=status.HTTP_200_OK,
+            )
+
+        raise PermissionDenied(
+            {"error": "You do not have permission to delete this report."}
+        )
 
 
 class UpdateReportView(generics.UpdateAPIView):
@@ -345,58 +431,72 @@ class UpdateReportView(generics.UpdateAPIView):
         try:
             report = Report.objects.get(report_id=report_id)
         except Report.DoesNotExist:
-            return Response({"error": "Report not found"}, status=status.HTTP_404_NOT_FOUND)
-            
-        serializer = UpdateReportSerializer(report, data=request.data, context={'request': request})
-        
+            return Response(
+                {"error": "Report not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = UpdateReportSerializer(
+            report, data=request.data, context={"request": request}
+        )
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class SomeView(APIView):
-    permission_classes = [IsAuthenticated, IsSuperAdmin]  # Or any other permission class
+    permission_classes = [
+        IsAuthenticated,
+        IsSuperAdmin,
+    ]  # Or any other permission class
 
     def get(self, request):
         # Your logic here
-        return Response({"message": "This is a super admin view."}, status=status.HTTP_200_OK)
-    
+        return Response(
+            {"message": "This is a super admin view."}, status=status.HTTP_200_OK
+        )
+
 
 class OTPVerificationView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = OTPVerificationSerializer  # Use the updated serializer
 
-    def get(self, request, *args, **kwargs):    
-        return Response({
-            "message": "An email containing the OTP has been sent to your email address."
-        }, status=status.HTTP_200_OK)
-
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)  # Validate incoming data
-        
-        otp_input = serializer.validated_data['otp']  # Extract the OTP
-        email = serializer.validated_data['email']
-    
+
+        otp_input = serializer.validated_data["otp"]  # Extract the OTP
+        email = serializer.validated_data["email"]
+
         try:
-            # Fetch the user based on the OTP
-            user = User.objects.get(email=email)  
+            user = User.objects.get(email=email)
 
             if user.is_email_verified:
-                return Response({"message": "Email already verified."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"message": "Email already verified."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             if user.otp == otp_input:  # Compare the input OTP with the stored one
-                    user.otp = None  # Clear the OTP after verification
-                    user.is_email_verified = True  # Set is_email_verified to True
-                    user.save()  # Save changes to the database
-                    
-                    return Response({"message": "Your Email has been verified."}, status=status.HTTP_200_OK)
+                user.otp = None  # Clear the OTP after verification
+                user.is_email_verified = True  # Set is_email_verified to True
+                user.save()  # Save changes to the database
+
+                return Response(
+                    {"message": "Your Email has been verified."},
+                    status=status.HTTP_200_OK,
+                )
             else:
-                return Response({"message": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"message": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST
+                )
         except User.DoesNotExist:
-                return Response({"message": "Invalid OTP"}, status=status.HTTP_404_NOT_FOUND)
-        
+            return Response(
+                {"message": "Invalid OTP"}, status=status.HTTP_404_NOT_FOUND
+            )
+
 class UserProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserProfileSerializer  # Use the same serializer you use for registration or create a new one
@@ -406,25 +506,27 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         user = self.get_object()
-        serializer = self.get_serializer(user, data=request.data, partial=True)  # partial=True allows partial updates (e.g. only updating email)
+        serializer = self.get_serializer(
+            user, data=request.data, partial=True
+        )  # partial=True allows partial updates (e.g. only updating email)
 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
-    
+
 # class UserProfileViewSet(viewsets.ModelViewSet):
 #     parser_classes = [MultiPartParser]
-    
+
 #     @action(detail=True, methods=['post'])
 #     def upload_profile_image(self, request, pk=None):
 #         user = self.get_object()
 #         user.profile_image_path = request.FILES.get('profile_image')
 #         user.save()
 #         return Response({'message': 'Profile image updated successfully', 'profile_image_path': user.profile_image_path.url})
-    
+
+
 class VerifyPasswordView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = VerifyPasswordSerializer
@@ -433,14 +535,15 @@ class VerifyPasswordView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        password = serializer.validated_data['password']
+        password = serializer.validated_data["password"]
         user = request.user
 
         if user.check_password(password):
             return Response({"valid": True}, status=status.HTTP_200_OK)
         else:
             return Response({"valid": False}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+
 class ChangePasswordView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ChangePasswordSerializer
@@ -450,11 +553,14 @@ class ChangePasswordView(generics.UpdateAPIView):
         serializer.is_valid(raise_exception=True)
 
         user = request.user
-        user.set_password(serializer.validated_data['new_password'])
+        user.set_password(serializer.validated_data["new_password"])
         user.save()
 
-        return Response({"message": "Password changed successfully."}, status=status.HTTP_200_OK)
-    
+        return Response(
+            {"message": "Password changed successfully."}, status=status.HTTP_200_OK
+        )
+
+
 class VerifyAccountView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]  # Allow only authenticated users
     serializer_class = VerifyAccountSerializer
@@ -466,15 +572,19 @@ class VerifyAccountView(generics.CreateAPIView):
 
         # Save the new VerifyAccount instance
         verify_account = serializer.save()
-        
-        return Response({
-            "message": "Verification account created successfully.",
-            "data": VerifyAccountSerializer(verify_account).data
-        }, status=status.HTTP_201_CREATED)
-    
+
+        return Response(
+            {
+                "message": "Verification account created successfully.",
+                "data": VerifyAccountSerializer(verify_account).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
 class AcceptVerifyAccount(generics.UpdateAPIView):
     queryset = User.objects.all()
-    permission_classes = [IsSuperAdmin] 
+    permission_classes = [IsSuperAdmin]
     serializer_class = VerifyUser
 
     def update(self, request, *args, **kwargs):
@@ -483,12 +593,14 @@ class AcceptVerifyAccount(generics.UpdateAPIView):
             instance = self.get_object()
 
             # Logging for debugging
-            print(f"Before update: is_verified={instance.is_verified}, score={instance.score}")
+            print(
+                f"Before update: is_verified={instance.is_verified}, score={instance.score}"
+            )
 
             # Update fields
             instance.is_verified = True
             instance.score = (instance.score or 0) + 20  # Ensure score is not None
-            
+
             # Save changes to the database
             instance.save(update_fields=["is_verified", "score"])
 
@@ -498,46 +610,52 @@ class AcceptVerifyAccount(generics.UpdateAPIView):
             self.perform_update(serializer)
 
             # Logging for debugging
-            print(f"After update: is_verified={instance.is_verified}, score={instance.score}")
+            print(
+                f"After update: is_verified={instance.is_verified}, score={instance.score}"
+            )
 
             # Return success response
             return Response(
-                {'detail': 'User successfully verified and score updated.'},
-                status=status.HTTP_200_OK
+                {"detail": "User successfully verified and score updated."},
+                status=status.HTTP_200_OK,
             )
         except ValidationError as e:
             # Handle validation errors
-            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             # Handle general errors
             print(f"Error: {e}")
             return Response(
-                {'detail': 'An error occurred while updating the user.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"detail": "An error occurred while updating the user."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 
-
 class CitizenViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.filter(role='citizen')  # Filter for citizens
+    queryset = User.objects.filter(role="citizen")  # Filter for citizens
     serializer_class = CitizenSerializer
     permission_classes = [IsAuthenticated]
     # permission_classes = [AllowAny]
 
+
 class DepartmentHeadViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.filter(role='department_head')  # Filter for department heads
+    queryset = User.objects.filter(
+        role="department_head"
+    )  # Filter for department heads
     serializer_class = DepartmentAdminSerializer
     # permission_classes = [IsAuthenticated]
     permission_classes = [AllowAny]
 
+
 class SuperAdminViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.filter(role='superadmin')  # Filter for Admins
+    queryset = User.objects.filter(role="superadmin")  # Filter for Admins
     serializer_class = WorkerSerializers
     # permission_classes = [IsAuthenticated]
     permission_classes = [AllowAny]
 
+
 class WorkersViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.filter(role='worker')  
+    queryset = User.objects.filter(role="worker")
     serializer_class = WorkerSerializers
     # permission_classes = [IsAuthenticated]
     permission_classes = [AllowAny]
@@ -549,7 +667,9 @@ class UsersViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
 
-        return User.objects.filter(role__in=["citizen", "department_admin", "department_head", "worker"])
+        return User.objects.filter(
+            role__in=["citizen", "department_admin", "department_head", "worker"]
+        )
 
 
 class GetWorkerViewSet(generics.GenericAPIView):
@@ -560,10 +680,5 @@ class GetWorkerViewSet(generics.GenericAPIView):
         user = self.request.user
         if not user.department:
             return User.objects.none()
-        
-        return User.objects.filter(
-            role__in=["worker"], 
-            department=user.department
-        )
 
-
+        return User.objects.filter(role__in=["worker"], department=user.department)
