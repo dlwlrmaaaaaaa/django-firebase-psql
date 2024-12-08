@@ -76,7 +76,7 @@ urlpatterns = [
     path("prediction/", FirePredictionView.as_view(), name="create-report"),
     path("otp/verify/", OTPVerificationView.as_view(), name="verify"),
     path("resend-otp/verify/", ResendOtp.as_view(), name="resend-otp"),
-      path("resend-otp-department/", ResendOtpDepartment.as_view(), name="resend_otp_department"), 
+    path("resend-otp-department/", ResendOtpDepartment.as_view(), name="resend_otp_department"), 
     ##update reports
     path(
         "reports/<int:report_id>/update/",
