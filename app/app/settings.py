@@ -115,11 +115,7 @@ database_url = os.environ.get("DATABASE_URI")
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'backend',
-        'USER': 'postgres',
-        'PASSWORD': '1804',
-        'HOST': 'localhost',
-        'PORT': '5432'
+        'NAME': 'backend'
     }
 }
 
@@ -168,7 +164,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-CORS_ALLOWED_ORIGINS = ['*']
+CORS_ALLOW_ALL_ORIGINS = True
 
 
 AUTHENTICATION_BACKENDS = [
