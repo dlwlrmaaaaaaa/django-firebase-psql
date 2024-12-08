@@ -238,57 +238,6 @@ class ResendOtp(generics.UpdateAPIView):
 
         return Response({"message": "OTP resent successfully"}, status=200)
 
-
-class CitizenRegitsration(generics.CreateAPIView):
-    permission_classes = [AllowAny]
-    serializer_class = CitizenSerializer
-
-    def create(self, request, *args, **kwargs):
-        print("Request data:", request.data)
-        serializer = self.get_serializer(data=request.data)
-        # Check if the serializer is valid
-        # Check if the serializer is valid
-        if not serializer.is_valid():
-            print("Validation errors:", serializer.errors)  # Log the errors
-            return Response(serializer.errors, status=400)
-        try:
-            user = serializer.save()
-
-            otp = random.randint(100000, 999999)
-            user.otp = str(otp)
-            user.save()
-
-            self.send_verification_email(user.email, otp)
-
-        except Exception as e:
-            print(
-                "Error during user creation or email sending:", str(e)
-            )  # Log the error
-            return Response(
-                {"error": "Internal server error", "details": str(e)}, status=500
-            )
-
-        return redirect("verify")
-
-    def send_verification_email(self, email, otp):
-        subject = "Verify your email"
-        message = (
-            f"<html>"
-            f"<body>"
-            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
-            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
-            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
-            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
-            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
-            f"</body>"
-            f"</html>"
-        )
-        from_email = settings.DEFAULT_FROM_EMAIL
-        recipient_list = [email]
-
-        send_mail(subject, message, from_email, recipient_list, html_message=message)
-
-
 class ResendOtpDepartment(generics.UpdateAPIView):
     permission_classes = [AllowAny]
 
