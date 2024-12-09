@@ -48,6 +48,9 @@ import os
 import gdown
 import uuid
 
+from django.http import JsonResponse
+from .models import User, Department
+
 User = get_user_model()
 
 import os
@@ -716,3 +719,29 @@ class GetWorkerViewSet(generics.GenericAPIView):
             return User.objects.none()
 
         return User.objects.filter(role__in=["worker"], department=user.department)
+    
+
+    
+
+def get_department_details(request, assigned_to_id):
+    try:
+        # Step 1: Get the user with the given ID
+        user = User.objects.filter(id=assigned_to_id).first()
+        if not user:
+            return JsonResponse({"department_id": "Unknown", "department_name": "Unknown"})
+
+        # Step 2: Get the department_id from the user
+        department_id = user.department_id
+        
+        # Step 3: Get the department name using the department_id
+        department = Department.objects.filter(id=department_id).first()
+        if not department:
+            return JsonResponse({"department_id": "Unknown", "department_name": "Unknown"})
+
+        # Return both department_id and department_name
+        return JsonResponse({
+            "department_id": department_id,
+            "department_name": department.name
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
