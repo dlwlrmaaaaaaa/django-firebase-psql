@@ -44,6 +44,7 @@ class User(AbstractUser):
     station = models.CharField(max_length=100, blank=True, null=True)
     station_address = models.CharField(max_length=255, blank=True, null=True)
     home_address = models.CharField(max_length=255, blank=True, null=True)
+    department_id = models.IntegerField
 
     def __str__(self):
         return self.username
