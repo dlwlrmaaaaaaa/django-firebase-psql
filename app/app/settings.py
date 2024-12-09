@@ -115,7 +115,7 @@ database_url = os.environ.get("DATABASE_URI")
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'backend',
+        'NAME': 'backend'
     }
 }
 
@@ -164,7 +164,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-CORS_ALLOWED_ORIGINS = ['*']
+CORS_ALLOWED_ORIGINS = [
+    "http://django-firebase-psql.onrender.com",
+   "https://django-firebase-psql.onrender.com",
+]
 
 
 AUTHENTICATION_BACKENDS = [

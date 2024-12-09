@@ -34,6 +34,7 @@ from .views import (
     UsersViewSet,
     # SuperAdminViewSet
 )
+from django.http import JsonResponse
 
 # Create a router and register our viewsets with it.
 router = DefaultRouter()
@@ -45,8 +46,12 @@ router.register(r"workers", WorkersViewSet, basename="worker")  # Unique basenam
 router.register(r"users", UsersViewSet, basename="user")  # Unique basename
 # router.register(r'admins', SuperAdminViewSet, basename='admin')  # Unique basename
 
+def home(request):
+    return JsonResponse({'message': 'Welcome to your Django app!'})
+
 
 urlpatterns = [
+    path('health/', home, name='health'),
     path(
         "token/", MyTokenObtainPairView.as_view(), name="token_obtain_pair"
     ),  ## This is login and generated token
