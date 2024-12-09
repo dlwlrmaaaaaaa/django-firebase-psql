@@ -167,6 +167,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://django-firebase-psql.onrender.com",
    "https://django-firebase-psql.onrender.com",
+   "http://localhost:5173",
 ]
 
 
