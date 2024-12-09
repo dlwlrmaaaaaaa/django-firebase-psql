@@ -1,3 +1,4 @@
+from django.forms import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.models import User
 from rest_framework import generics, viewsets
@@ -57,6 +58,15 @@ from rest_framework import generics
 import pandas as pd
 from django.conf import settings
 import logging
+
+
+from django.urls import reverse
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator
+from django.shortcuts import get_object_or_404
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
 
 
 # Set up logging
@@ -227,7 +237,8 @@ class ResendOtp(generics.UpdateAPIView):
         CitizenRegitsration.send_verification_email(self, user.email, otp)
 
         return Response({"message": "OTP resent successfully"}, status=200)
-    
+
+
 class CitizenRegitsration(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = CitizenSerializer
@@ -277,6 +288,7 @@ class CitizenRegitsration(generics.CreateAPIView):
 
         send_mail(subject, message, from_email, recipient_list, html_message=message)
 
+
 class ResendOtpDepartment(generics.UpdateAPIView):
     permission_classes = [AllowAny]
 
@@ -287,12 +299,11 @@ class ResendOtpDepartment(generics.UpdateAPIView):
             user = User.objects.get(email=email, is_email_verified=False)
         except User.DoesNotExist:
             return Response({"error": "User not found or already verified"}, status=404)
-        
+
         otp = random.randint(100000, 999999)
         user.otp = otp
         user.otp_created_at = timezone.now()
         user.save()
-
         self.send_verification_email(user.email, otp)
 
         return Response({"message": "OTP resent successfully"}, status=200)
@@ -320,44 +331,61 @@ class DepartmentRegistration(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsSuperAdmin]
     serializer_class = DepartmentAdminSerializer
 
+
 class WorkerRegistration(generics.CreateAPIView):
     permission_classes = [IsDepartmentAdmin]
     serializer_class = WorkerSerializers
-    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        print("Request data:", request.data)
         serializer = self.get_serializer(data=request.data)
-        # Check if the serializer is valid
+        department_admin = self.request.user
+        station_address = department_admin.station_address
+
         # Check if the serializer is valid
         if not serializer.is_valid():
-            print("Validation errors:", serializer.errors)  # Log the errors
             return Response(serializer.errors, status=400)
+
         try:
-            user = serializer.save()
+            # Create the worker user and set the address from the department admin
+            user = serializer.save(station_address=station_address)
+            user.is_verified = False  # Ensure the account is not verified yet
+            user.save()  # Save the user after assigning the address
 
-            otp = random.randint(100000, 999999)
-            user.otp = str(otp)
-            user.save()
+            # Generate a verification link
+            verification_link = self.generate_verification_link(user)
 
-            self.send_verification_email(user.email, otp)
+            # Send the verification email
+            self.send_verification_email(user.email, verification_link)
 
         except Exception as e:
-            print("Error during user creation or email sending:", str(e))  # Log the error
-            return Response({"error": "Internal server error", "details": str(e)}, status=500)
+            return Response(
+                {"error": "Internal server error", "details": str(e)}, status=500
+            )
 
-        return redirect('verify')
-    
-    def send_verification_email(self, email, otp):
-        subject = "Verify your email"
+        return Response(
+            {
+                "message": "Account created successfully. Verification link sent to email."
+            },
+            status=201,
+        )
+
+    def generate_verification_link(self, user):
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        verification_url = reverse("verify-email")  # Name of the verification endpoint
+        link = f"{self.request.scheme}://{self.request.get_host()}{verification_url}?uid={uid}&token={token}"
+        return link
+
+    def send_verification_email(self, email, link):
+        subject = "Verify Your Email"
         message = (
             f"<html>"
             f"<body>"
-            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
-            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
-            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
-            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
-            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
+            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em;'>Verify your account.</p>"
+            f"<p style='text-align: center; font-size: 0.85em;'>Click the link below to verify your account:</p>"
+            f"<p style='text-align: center;'><a href='{link}' style='font-weight: bold; color: #1D70B8;'>{link}</a></p>"
+            f"<p style='text-align: center; font-size: 0.75em;'>This link is valid for 24 hours. If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: left; font-size: 0.75em;'>Best regards,<br>The CRISP Team</p>"
             f"</body>"
             f"</html>"
         )
@@ -367,8 +395,58 @@ class WorkerRegistration(generics.CreateAPIView):
         send_mail(subject, message, from_email, recipient_list, html_message=message)
 
 
+class VerifyWorkerEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        uid = request.GET.get("uid")
+        token = request.GET.get("token")
+
+        try:
+            # Decode the user ID
+            user_id = urlsafe_base64_decode(uid).decode()
+            user = get_object_or_404(User, pk=user_id)
+
+            # Check if the token is valid
+            if default_token_generator.check_token(user, token):
+                user.is_verified = True
+                user.save()
+                return Response(
+                    {"message": "Your email has been verified!"}, status=200
+                )
+
+            return Response({"error": "Invalid or expired token."}, status=400)
+
+        except Exception as e:
+            return Response({"error": "Invalid request."}, status=400)
+
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        uid = request.GET.get("uid")
+        token = request.GET.get("token")
+
+        try:
+            # Decode the user ID
+            user_id = urlsafe_base64_decode(uid).decode()
+            user = get_object_or_404(User, pk=user_id)
+
+            # Check if the token is valid
+            if default_token_generator.check_token(user, token):
+                user.is_verified = True
+                user.save()
+                return Response(
+                    {"message": "Your email has been verified!"}, status=200
+                )
+
+            return Response({"error": "Invalid or expired token."}, status=400)
+
+        except Exception as e:
+            return Response({"error": "Invalid request."}, status=400)
+
 class DepartmentListView(generics.ListAPIView):
-    permission_classes = [IsSuperAdmin]
+    permission_classes = [AllowAny]
     queryset = Department.objects.all()
     serializer_class = DepartmentList
 
@@ -496,6 +574,7 @@ class OTPVerificationView(generics.GenericAPIView):
             return Response(
                 {"message": "Invalid OTP"}, status=status.HTTP_404_NOT_FOUND
             )
+
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
