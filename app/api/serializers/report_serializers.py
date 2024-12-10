@@ -218,16 +218,16 @@ class AddReportSerializer(serializers.ModelSerializer):
 
                 # Get a reference to the Firebase storage bucket
                 bucket = storage.bucket()
+                try:
+                    image_blob = bucket.blob(f'images_report/{image_name}.{ext}')
+                    image_blob.upload_from_filename(temp_image_path, content_type=f'image/{ext}')
 
-                # Create a blob using the report UUID as the image name and upload the file to Firebase
-                image_blob = bucket.blob(f'images_report/{image_name}.{ext}')
-                image_blob.upload_from_filename(temp_image_path, content_type=f'image/{ext}')
+                    image_blob.make_public()
 
-                # Make the image publicly accessible
-                image_blob.make_public()
+                    image_path_string = image_blob.public_url
+                finally:
+                    default_storage.delete(temp_image_path)
 
-                # Add the public image URL to report data
-                image_path_string = image_blob.public_url
 
             report_data = {
                 'report_id': str(report_uuid),
