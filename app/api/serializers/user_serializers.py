@@ -160,7 +160,11 @@ class DepartmentAdminSerializer(serializers.ModelSerializer):
             })
 
         return user
-    
+class GetWorkersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = '__all__'
+
 class WorkerSerializers(serializers.ModelSerializer):
 
 
@@ -213,6 +217,7 @@ class WorkerSerializers(serializers.ModelSerializer):
         
 
         return user
+    
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

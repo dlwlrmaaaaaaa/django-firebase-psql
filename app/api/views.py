@@ -25,6 +25,7 @@ from .serializers.user_serializers import (
     ChangePasswordSerializer,
     WorkerSerializers,
     UsersSerializer,
+    GetWorkersSerializer
 )
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .serializers.fire_serializer import FirePredictionSerializer
@@ -740,7 +741,19 @@ class GetWorkerViewSet(generics.GenericAPIView):
 
         return User.objects.filter(role__in=["worker"], department=user.department)
     
+class GetWorkerUnderDepartmentAdmin(generics.GenericAPIView):
+    serializer_class = GetWorkersSerializer
+    permission_classes = [IsDepartmentAdmin]
 
+    def get(self, request, *args, **kwargs):
+        # Ensure the user has the right permission (department admin)
+        user = self.request.user
+        if not user.department:
+            return Response({"detail": "No department found for user."}, status=400)
+
+        workers = User.objects.filter(role="worker", supervisor_id=user.id)
+        serializer = self.get_serializer(workers, many=True)
+        return Response(serializer.data)
     
 
 def get_department_details(request, assigned_to_id):
