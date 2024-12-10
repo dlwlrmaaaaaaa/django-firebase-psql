@@ -19,6 +19,7 @@ from ..models import Department
 
 User = get_user_model()
 
+
 class CitizenSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         required=True,
@@ -398,3 +399,4 @@ class GetWorkerSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email', 'id', 'department']
+
