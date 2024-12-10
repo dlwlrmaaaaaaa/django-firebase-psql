@@ -34,6 +34,8 @@ from .views import (
     UsersViewSet,
     # SuperAdminViewSet
 )
+from . import views
+
 
 # Create a router and register our viewsets with it.
 router = DefaultRouter()
@@ -96,6 +98,7 @@ urlpatterns = [
     path("verify-account/", VerifyAccountView.as_view(), name="verify-account"),
     ##Department List View
     path("departments/", DepartmentListView.as_view(), name="departments"),
+    path('get-department-details/<int:assigned_to_id>/', views.get_department_details, name='get_department_details'),
     path("worker/profile", GetWorkerViewSet.as_view(), name="worker_profile"),
     path("verify-user/<int:pk>/", AcceptVerifyAccount.as_view(), name="verify-user"),
     path("api/departments/", DepartmentListView.as_view(), name="api_department"),
