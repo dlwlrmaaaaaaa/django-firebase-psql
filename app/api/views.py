@@ -25,6 +25,7 @@ from .serializers.user_serializers import (
     ChangePasswordSerializer,
     WorkerSerializers,
     UsersSerializer,
+    GetWorkersSerializer
 )
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .serializers.fire_serializer import FirePredictionSerializer
@@ -47,7 +48,8 @@ import pandas as pd
 import os
 import gdown
 import uuid
-
+from app.firebase import db
+from firebase_admin import firestore
 from django.http import JsonResponse
 from .models import User, Department
 
@@ -553,15 +555,34 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# class UserProfileViewSet(viewsets.ModelViewSet):
-#     parser_classes = [MultiPartParser]
+class DeleteAccount(APIView):
+    permission_classes = [IsSuperAdmin]  # Ensure only super admins can delete other accounts
 
-#     @action(detail=True, methods=['post'])
-#     def upload_profile_image(self, request, pk=None):
-#         user = self.get_object()
-#         user.profile_image_path = request.FILES.get('profile_image')
-#         user.save()
-#         return Response({'message': 'Profile image updated successfully', 'profile_image_path': user.profile_image_path.url})
+    def delete(self, request, *args, **kwargs):
+        # Get the user ID from the request parameter (assuming it's passed in the URL)
+        user_id = self.kwargs.get('user_id')
+
+        try:
+            # Find the user by ID
+            user = User.objects.get(id=user_id)
+
+            # Store deleted account data to Firebase (in a 'deletedAccounts' collection)
+            deleted_account_data = {
+                'username': user.username,
+                'email': user.email,
+                'date_deleted': firestore.SERVER_TIMESTAMP,
+            }
+
+            # Store to Firestore
+            db.collection('deletedAccounts').add(deleted_account_data)
+
+            # Delete the user account
+            user.delete()
+
+            return Response({"result": "User deleted successfully"}, status=200)
+        
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404) 
 
 
 class VerifyPasswordView(generics.GenericAPIView):
@@ -720,7 +741,19 @@ class GetWorkerViewSet(generics.GenericAPIView):
 
         return User.objects.filter(role__in=["worker"], department=user.department)
     
+class GetWorkerUnderDepartmentAdmin(generics.GenericAPIView):
+    serializer_class = GetWorkersSerializer
+    permission_classes = [IsDepartmentAdmin]
 
+    def get(self, request, *args, **kwargs):
+        # Ensure the user has the right permission (department admin)
+        user = self.request.user
+        if not user.department:
+            return Response({"detail": "No department found for user."}, status=400)
+
+        workers = User.objects.filter(role="worker", supervisor_id=user.id)
+        serializer = self.get_serializer(workers, many=True)
+        return Response(serializer.data)
     
 
 def get_department_details(request, assigned_to_id):
