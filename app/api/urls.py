@@ -21,7 +21,8 @@ from .views import (
     ChangePasswordView,
     VerifyAccountView,
     ResendOtpDepartment,
-    VerifyWorkerEmailView
+    VerifyWorkerEmailView,
+    DeleteAccount
 )
 from rest_framework.routers import DefaultRouter
 
@@ -93,6 +94,7 @@ urlpatterns = [
     path('verify-email/', VerifyWorkerEmailView.as_view(), name='verify-email'),
 
     path("user/profile/", UserProfileView.as_view(), name="user_profile"),
+    path('delete-account/<int:user_id>/', DeleteAccount.as_view(), name='delete-account'),
     path("verify-password/", VerifyPasswordView.as_view(), name="verify-password"),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("verify-account/", VerifyAccountView.as_view(), name="verify-account"),
