@@ -35,7 +35,14 @@ class AddReportSerializer(serializers.ModelSerializer):
         report_lat = float(validated_data['latitude'])
         report_lon = float(validated_data['longitude'])
         report_type = validated_data['type_of_report']
-        time_threshold = datetime.now() - timedelta(minutes=60)
+        emeregency = validated_data['is_emergency']
+
+        if emeregency == "emergency":
+            time_threshold = datetime.now() - timedelta(minutes=60)
+        else:
+            time_threshold = datetime.now() - timedelta(days=2)
+        
+        
 
         # Query Firestore for recent reports of the same type
         collection_path = 'reports'
@@ -86,7 +93,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 
                 if user.id in [int(id) for id in user_ids]:
                     raise serializers.ValidationError({
-                        "detail": "You've already reported this incident.",
+                        "detail": "You've already reported or verified this incident.",
                         "existing_report": duplicate_report
                     })
                 else:
