@@ -224,9 +224,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         print("Starting token validation...")
 
-        # Debug the incoming attributes
-        print(f"Attributes received: {attrs}")
-
         username = attrs.get('username')
         username_or_email = User.objects.get(email=username)
         password = attrs.get('password')
