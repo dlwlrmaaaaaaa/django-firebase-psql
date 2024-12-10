@@ -197,7 +197,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 else:
                     print("No suitable admin found.")
             else:
-                validated_data.get['status'] = "Pending"
+                validated_data['status'] = "Pending"
 
 
                                     
