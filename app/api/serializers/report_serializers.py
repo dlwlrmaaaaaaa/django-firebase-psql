@@ -35,7 +35,14 @@ class AddReportSerializer(serializers.ModelSerializer):
         report_lat = float(validated_data['latitude'])
         report_lon = float(validated_data['longitude'])
         report_type = validated_data['type_of_report']
-        time_threshold = datetime.now() - timedelta(minutes=60)
+        emeregency = validated_data['is_emergency']
+
+        if emeregency == "emergency":
+            time_threshold = datetime.now() - timedelta(minutes=60)
+        else:
+            time_threshold = datetime.now() - timedelta(days=2)
+        
+        
 
         # Query Firestore for recent reports of the same type
         collection_path = 'reports'
@@ -86,7 +93,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 
                 if user.id in [int(id) for id in user_ids]:
                     raise serializers.ValidationError({
-                        "detail": "You've already reported this incident.",
+                        "detail": "You've already reported or verified this incident.",
                         "existing_report": duplicate_report
                     })
                 else:
@@ -155,7 +162,8 @@ class AddReportSerializer(serializers.ModelSerializer):
                     "Floods": 6,
                     "Road Accident": 7,
                     "Street lights": 4,
-                    "Potholes": 5,            
+                    "Potholes": 5,     
+                    "Others": 8       
             }
             target_department_id = report_type_to_department_id.get(report_type)
             print(f"Target Department ID: {target_department_id}")  # Debugging
@@ -194,8 +202,9 @@ class AddReportSerializer(serializers.ModelSerializer):
                  validated_data['assigned_to_id'] = nearest_admin.id
                  validated_data['status'] = "Ongoing"
             else:
-                print("No suitable admin found.")    
-
+                print("No suitable admin found.") 
+                validated_data['assigned_to_id'] = None
+                validated_data['status'] = "Pending"
                 
                
 
