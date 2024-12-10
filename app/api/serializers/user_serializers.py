@@ -292,9 +292,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 'station': getattr(self.user, 'station', None),
             })
 
-        # Log final response data
-        print(f"Token response data for user {self.user.username}: {data}")
-
         return data
 
 
