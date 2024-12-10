@@ -162,7 +162,8 @@ class AddReportSerializer(serializers.ModelSerializer):
                     "Floods": 6,
                     "Road Accident": 7,
                     "Street lights": 4,
-                    "Potholes": 5,            
+                    "Potholes": 5,     
+                    "Others": 8       
             }
             target_department_id = report_type_to_department_id.get(report_type)
             print(f"Target Department ID: {target_department_id}")  # Debugging
@@ -201,8 +202,9 @@ class AddReportSerializer(serializers.ModelSerializer):
                  validated_data['assigned_to_id'] = nearest_admin.id
                  validated_data['status'] = "Ongoing"
             else:
-                print("No suitable admin found.")    
-
+                print("No suitable admin found.") 
+                validated_data['assigned_to_id'] = None
+                validated_data['status'] = "Pending"
                 
                
 
