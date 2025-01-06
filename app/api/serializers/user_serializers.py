@@ -295,21 +295,21 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             )
 
         # Handle sessions securely
-        existing_session = UserSession.objects.filter(user=user).first()
-        if existing_session:
-            print(f"Invalidating previous session for user: {user.username}")
-            existing_session.delete()  # Invalidate the old session
+        # existing_session = UserSession.objects.filter(user=user).first()
+        # if existing_session:
+        #     print(f"Invalidating previous session for user: {user.username}")
+        #     existing_session.delete()  # Invalidate the old session
 
         # Create a new session for the current login
-        user_agent = self.context.get('request').META.get('HTTP_USER_AGENT', '')
-        new_session = UserSession(user=user, device_id=user_agent)
+        # user_agent = self.context.get('request').META.get('HTTP_USER_AGENT', '')
+        # new_session = UserSession(user=user, device_id=user_agent)
         
-        try:
-            new_session.save()
-        except IntegrityError as e:
-            logger.error(f"Error saving session: {e}")
-            raise ValidationError({"detail": "Error while saving session. Please try again."}, 
-                                  code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # try:
+        #     new_session.save()
+        # except IntegrityError as e:
+        #     logger.error(f"Error saving session: {e}")
+        #     raise ValidationError({"detail": "Error while saving session. Please try again."}, 
+        #                           code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         self.user = user
         data = super().validate(attrs)
