@@ -158,10 +158,11 @@ class AddReportSerializer(serializers.ModelSerializer):
 
                 # Map report type to department ID
             report_type_to_department_id = {
-                    "Fires": 1,
-                    "Floods": 6,
+                    "Fire": 1,
+                    "Flood": 6,
                     "Road Accident": 7,
-                    "Street lights": 4,
+                    "Street Light": 4,
+                    "Fallen Trees": 7,
                     "Potholes": 5,     
                     "Others": 8       
             }

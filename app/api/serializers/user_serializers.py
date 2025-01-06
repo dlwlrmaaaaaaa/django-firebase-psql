@@ -1,21 +1,24 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import get_user_model
-
+from django.db import IntegrityError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import Token
 from rest_framework_simplejwt.views import TokenObtainPairView
-from ..utils import get_account_type
+from ..utils import get_account_type, generate_firebase_token
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import status
+from firebase_admin.exceptions import FirebaseError
 import ipaddress
 from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from ..models import Department
+from ..models import Department, UserSession
+from app.firebase import db
+import logging
 
 User = get_user_model()
 
@@ -66,6 +69,8 @@ class CitizenSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid IP address format.")
         return value
 
+    from firebase_admin.exceptions import FirebaseError
+
     def create(self, validated_data):
         user = User(
             username=validated_data['username'],
@@ -79,13 +84,35 @@ class CitizenSerializer(serializers.ModelSerializer):
         )
         user.set_password(validated_data['password'])
         user.save()
+
+        # Save non-sensitive data to Firestore
+        user_data = {
+            'username': user.username,
+            'email': user.email,
+            'role': user.role,
+            'contact_number': user.contact_number,
+            'address': user.address,
+            'coordinates': user.coordinates,
+            'ipv': user.ipv,
+            'score': user.score
+        }
+        
+        collection_path = 'users_info'
+        try:
+            doc_ref = db.collection(collection_path).document(user.username)
+            doc_ref.set(user_data)
+        except FirebaseError as e:
+            print(f"Error interacting with Firestore: {e}")
+            raise e
+
         return user
+
 
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
         password_confirm = validated_data.pop('password_confirm', None)
 
-        if password and password_confirm:
+        if password:
             if password != password_confirm:
                 raise serializers.ValidationError({"password_confirm": "Passwords must match."})
             instance.set_password(password)
@@ -222,10 +249,20 @@ class WorkerSerializers(serializers.ModelSerializer):
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
+        logger = logging.getLogger(__name__)
+
         print("Starting token validation...")
 
         username = attrs.get('username')
-        username_or_email = User.objects.get(email=username)
+        
+        # Try to find the user by email (avoid SQL injection)
+        try:
+            username_or_email = User.objects.get(email=username)  # Can also try by username if needed
+        except User.DoesNotExist:
+            print(f"User not found: {username}")
+            raise ValidationError({"detail": "Invalid credentials. Please try again."}, 
+                                  code=status.HTTP_401_UNAUTHORIZED)
+        
         password = attrs.get('password')
 
         # Check if username and password are present
@@ -238,7 +275,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         print(f"Attempting to authenticate user: {username_or_email}")
         user = authenticate(
             request=self.context.get('request'),
-            username=username_or_email,
+            username=username_or_email.username,  # Ensure you use the correct identifier here
             password=password
         )
 
@@ -257,11 +294,27 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 code=status.HTTP_403_FORBIDDEN
             )
 
-        # Log successful authentication
-        print(f"User authenticated successfully: {user}")
+        # Handle sessions securely
+        # existing_session = UserSession.objects.filter(user=user).first()
+        # if existing_session:
+        #     print(f"Invalidating previous session for user: {user.username}")
+        #     existing_session.delete()  # Invalidate the old session
+
+        # Create a new session for the current login
+        # user_agent = self.context.get('request').META.get('HTTP_USER_AGENT', '')
+        # new_session = UserSession(user=user, device_id=user_agent)
+        
+        # try:
+        #     new_session.save()
+        # except IntegrityError as e:
+        #     logger.error(f"Error saving session: {e}")
+        #     raise ValidationError({"detail": "Error while saving session. Please try again."}, 
+        #                           code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         self.user = user
         data = super().validate(attrs)
+
+        print(f"User authenticated successfully: {user}")
 
         # Add custom fields to the response
         account_type = get_account_type(self.user)
@@ -281,6 +334,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'is_email_verified': getattr(self.user, 'is_email_verified', False),
             'is_verified': getattr(self.user, 'is_verified', False),
             'score': getattr(self.user, 'score', None),
+            'firebase_token': generate_firebase_token(self.user)
         })
 
         if account_type in ['department_admin', 'worker']:

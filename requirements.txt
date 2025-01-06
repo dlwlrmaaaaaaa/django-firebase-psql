@@ -1,8 +1,0 @@
-Django==4.2.16
-psycopg2==2.9.10
-django-cors-headers==4.4.0
-djangorestframework==3.15.2
-djangorestframework-simplejwt==5.3.1
-firebase-admin==6.5.0
-pillow==10.4.0
-dj_database_url

@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 import uuid
 
+
+
 class Department(models.Model):
     id = models.AutoField(primary_key=True) 
     name = models.CharField(max_length=100, unique=True)  
@@ -49,7 +51,14 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
     
+class UserSession(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    device_id = models.CharField(max_length=255)  # Store user-agent or a unique device identifier
+    token = models.CharField(max_length=255)  # Store the token for the session
+    created_at = models.DateTimeField(auto_now_add=True)  # Track when the session was created
 
+    def __str__(self):
+        return f"Session for {self.user.username} on device {self.device_id}"
 
 class Report(models.Model):
     CATEGORY_CHOICES = [
