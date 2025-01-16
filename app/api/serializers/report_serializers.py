@@ -5,7 +5,6 @@ from firebase_admin import storage
 from app.firebase import db, bucket
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from app.firebase import db
 import uuid
 import base64
 from django.contrib.auth import get_user_model
@@ -197,7 +196,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 else:
                     print("No suitable admin found.")
             else:
-                validated_data.get['status'] = "Pending"
+                validated_data['status'] = "Pending"
 
 
                                     
