@@ -160,11 +160,11 @@ class AddReportSerializer(serializers.ModelSerializer):
             report_type_to_department_id = {
                     "Fire": 1,
                     "Flood": 6,
-                    "Road Accident": 7,
+                    "Road Accident": 3,
                     "Street Light": 4,
                     "Fallen Trees": 7,
                     "Potholes": 5,     
-                    "Others": 8       
+                    "Others": 6       
             }
             target_department_id = report_type_to_department_id.get(report_type)
             print(f"Target Department ID: {target_department_id}")  # Debugging
