@@ -19,7 +19,8 @@ from rest_framework import serializers
 from ..models import Department, UserSession
 from app.firebase import db
 import logging
-
+from django.core.mail import send_mail
+import random
 User = get_user_model()
 
 
@@ -270,7 +271,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             print(f"Missing credentials: username_or_email={username_or_email}, password={password}")
             raise ValidationError({"detail": "Both username/email and password are required."}, 
                                   code=status.HTTP_400_BAD_REQUEST)
-
+        
+        if not username_or_email.is_email_verified:
+            otp = self.generate_otp()
+            self.send_verification_email(username_or_email.email, otp)
+            
+            username_or_email.otp = otp
+            username_or_email.save()
+            return {
+                "is_email_verified": False,
+            }
         # Try to authenticate the user
         print(f"Attempting to authenticate user: {username_or_email}")
         user = authenticate(
@@ -293,23 +303,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 {"detail": "User account is disabled."},
                 code=status.HTTP_403_FORBIDDEN
             )
-
-        # Handle sessions securely
-        # existing_session = UserSession.objects.filter(user=user).first()
-        # if existing_session:
-        #     print(f"Invalidating previous session for user: {user.username}")
-        #     existing_session.delete()  # Invalidate the old session
-
-        # Create a new session for the current login
-        # user_agent = self.context.get('request').META.get('HTTP_USER_AGENT', '')
-        # new_session = UserSession(user=user, device_id=user_agent)
-        
-        # try:
-        #     new_session.save()
-        # except IntegrityError as e:
-        #     logger.error(f"Error saving session: {e}")
-        #     raise ValidationError({"detail": "Error while saving session. Please try again."}, 
-        #                           code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         self.user = user
         data = super().validate(attrs)
@@ -347,7 +340,26 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             })
 
         return data
+    def generate_otp(self):
+        return random.randint(100000, 999999)
+    
+    def send_verification_email(self, email, otp):
+        subject = "Verify your email"
+        message = (
+            f"<html>"
+            f"<body>"
+            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
+            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
+            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
+            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
+            f"</body>"
+            f"</html>"
+        )
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [email]
 
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
 
     
 

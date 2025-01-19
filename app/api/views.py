@@ -181,8 +181,6 @@ class CitizenRegitsration(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         print("Request data:", request.data)
         serializer = self.get_serializer(data=request.data)
-        # Check if the serializer is valid
-        # Check if the serializer is valid
         if not serializer.is_valid():
             print("Validation errors:", serializer.errors)  # Log the errors
             return Response(serializer.errors, status=400)
@@ -413,6 +411,7 @@ class DepartmentListView(generics.ListAPIView):
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
 
 
 class MyRefreshTokenPair(TokenRefreshView):
