@@ -272,7 +272,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise ValidationError({"detail": "Both username/email and password are required."}, 
                                   code=status.HTTP_400_BAD_REQUEST)
         
-        if not username_or_email.is_email_verified:
+        if not username_or_email.is_email_verified and username_or_email.role == 'citizen':
             otp = self.generate_otp()
             self.send_verification_email(username_or_email.email, otp)
             
@@ -329,7 +329,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'score': getattr(self.user, 'score', None),
             'firebase_token': generate_firebase_token(self.user)
         })
-
+        
         if account_type in ['department_admin', 'worker']:
             print(f"Adding department and supervisor details for: {self.user.username}")
             data.update({
