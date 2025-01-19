@@ -13,7 +13,8 @@ class ApiConfig(AppConfig):
                 "Medical Department",
                 "Police Department",
                 "Street Maintenance",
-                "Pothole Repair"
+                "Pothole Repair",
+                "General Department"
             ]
             for dept_name in default_departments:
                 Department.objects.get_or_create(name=dept_name)
