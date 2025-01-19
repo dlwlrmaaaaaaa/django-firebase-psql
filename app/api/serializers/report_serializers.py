@@ -10,8 +10,15 @@ import base64
 from django.contrib.auth import get_user_model
 from math import radians, sin, cos, sqrt, atan2
 from django.utils.timezone import now, timedelta
-
+import logging
 User = get_user_model()
+
+DUPLICATE_RADIUS_KM = 0.5
+EMERGENCY_THRESHOLD_MINUTES = 60
+NON_EMERGENCY_THRESHOLD_DAYS = 2
+IMAGE_UPLOAD_PATH = "images_report/"
+
+logger = logging.getLogger(__name__)
 
 class AddReportSerializer(serializers.ModelSerializer):
     image_path = serializers.CharField(required=False, allow_blank=True)
@@ -37,32 +44,33 @@ class AddReportSerializer(serializers.ModelSerializer):
         report_type = validated_data['type_of_report']
         emeregency = validated_data['is_emergency']
 
-        if emeregency == "emergency":
-            time_threshold = datetime.now() - timedelta(minutes=60)
-        else:
-            time_threshold = datetime.now() - timedelta(days=2)
+        is_emergency = validated_data["is_emergency"]
+
+        time_threshold = (
+            now() - timedelta(minutes=EMERGENCY_THRESHOLD_MINUTES)
+            if is_emergency == "emergency"
+            else now() - timedelta(days=NON_EMERGENCY_THRESHOLD_DAYS)
+        )
         
         
 
         # Query Firestore for recent reports of the same type
-        collection_path = 'reports'
+        collection_path = "reports"
         document_id = report_type.lower()
         doc_ref = db.collection(collection_path).document(document_id)
-        recent_reports = doc_ref.collection('reports').where(
-            'report_date', '>=', time_threshold.isoformat()
+        recent_reports = doc_ref.collection("reports").where(
+            "report_date", ">=", time_threshold.isoformat()
         ).stream()
 
         for report in recent_reports:
             report_data = report.to_dict()
-            existing_lat = float(report_data['latitude'])
-            existing_lon = float(report_data['longitude'])
+            existing_lat = float(report_data["latitude"])
+            existing_lon = float(report_data["longitude"])
 
             # Calculate distance to detect duplicates
             distance = self.calculate_distance(report_lat, report_lon, existing_lat, existing_lon)
-            if distance <= 0.5:  # 0.5 km radius
-                return True, {
-                    key: str(value) for key, value in report_data.items()
-                }
+            if distance <= DUPLICATE_RADIUS_KM:
+                return True, report_data
 
         return False, None
 
@@ -71,7 +79,21 @@ class AddReportSerializer(serializers.ModelSerializer):
         if value and not isinstance(value, str):
             raise serializers.ValidationError("Image path must be a valid string.")
         return value
-
+    def process_image_upload(self, image_data, report_uuid):
+        """Process and upload the image to Firebase."""
+        try:
+            image_format, imgstr = image_data.split(";base64,")
+            ext = image_format.split("/")[-1]
+            image_file = ContentFile(base64.b64decode(imgstr), name=f"{report_uuid}.{ext}")
+            bucket = storage.bucket()
+            image_blob = bucket.blob(f"{IMAGE_UPLOAD_PATH}{report_uuid}.{ext}")
+            image_blob.upload_from_file(image_file)
+            image_blob.make_public()
+            return image_blob.public_url
+        except Exception as e:
+            logger.error(f"Image upload failed: {e}")
+            raise serializers.ValidationError({"detail": "Failed to upload image."})
+        
     def create(self, validated_data):
         try:
 
@@ -158,12 +180,12 @@ class AddReportSerializer(serializers.ModelSerializer):
 
                 # Map report type to department ID
             report_type_to_department_id = {
-                    "Fire": 1,
+                    "Fire Accident": 1,
                     "Flood": 6,
                     "Road Accident": 3,
                     "Street Light": 4,
-                    "Fallen Trees": 7,
-                    "Potholes": 5,     
+                    "Fallen Tree": 7,
+                    "Pothole": 5,     
                     "Others": 6       
             }
             target_department_id = report_type_to_department_id.get(report_type)
@@ -211,34 +233,9 @@ class AddReportSerializer(serializers.ModelSerializer):
 
                                     
             report_uuid = uuid.uuid4()
-            image_path_string = ''
-            if 'image_path' in validated_data and validated_data['image_path']:
-                image_data = validated_data['image_path']
-                image_format, imgstr = image_data.split(';base64,')  # Splitting the format
-                ext = image_format.split('/')[-1]  # Getting the file extension
-
-                # Use the report UUID as the image name
-                image_name = str(report_uuid)
-
-                # Decode base64 data and create ContentFile for the image
-                image_file = ContentFile(base64.b64decode(imgstr), name=f"{image_name}.{ext}")
-
-                # Save the image to a temporary path
-                temp_image_path = default_storage.save(f'temporary_path/{image_name}.{ext}', image_file)
-
-                # Get a reference to the Firebase storage bucket
-                bucket = storage.bucket()
-                try:
-                    image_blob = bucket.blob(f'images_report/{image_name}.{ext}')
-                    image_blob.upload_from_filename(temp_image_path, content_type=f'image/{ext}')
-
-                    image_blob.make_public()
-
-                    image_path_string = image_blob.public_url
-                finally:
-                    default_storage.delete(temp_image_path)
-
-
+            validated_data["image_path"] = self.process_image_upload(
+                validated_data.get("image_path", ""), report_uuid
+            )
             report_data = {
                 'report_id': str(report_uuid),
                 'user_id': user.id,
@@ -253,7 +250,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 'downvote': 0,
                 'status': validated_data.get('status'),
                 'report_date': datetime.now().isoformat(),
-                'image_path': image_path_string,
+                'image_path': validated_data["image_path"],
                 'custom_type': validated_data['custom_type'],
                 'floor_number': validated_data['floor_number'],
                 'is_validated': False,
@@ -278,7 +275,7 @@ class AddReportSerializer(serializers.ModelSerializer):
             report = Report(
                 report_id=report_uuid,
                 user_id=user.id,
-                image_path=image_path_string,
+                image_path=validated_data["image_path"],
                 type_of_report=validated_data['type_of_report'],
                 report_description=validated_data['report_description'],
                 is_emergency=validated_data['is_emergency'],
