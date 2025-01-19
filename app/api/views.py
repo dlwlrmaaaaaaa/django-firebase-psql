@@ -413,6 +413,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 
+
 class MyRefreshTokenPair(TokenRefreshView):
     serializer_class = CustomTokenRefreshSerializer
 
