@@ -10,7 +10,9 @@ import base64
 from django.contrib.auth import get_user_model
 from math import radians, sin, cos, sqrt, atan2
 from django.utils.timezone import now, timedelta
+from geopy.distance import geodesic
 import logging
+import time
 User = get_user_model()
 
 DUPLICATE_RADIUS_KM = 0.5
@@ -30,19 +32,13 @@ class AddReportSerializer(serializers.ModelSerializer):
     @staticmethod
     def calculate_distance(lat1, lon1, lat2, lon2):
         """Calculate the Haversine distance between two points."""
-        R = 6371  # Earth's radius in kilometers
-        dlat = radians(lat2 - lat1)
-        dlon = radians(lon2 - lon1)
-        a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
-        c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        return R * c
+        return geodesic((lat1, lon1), (lat2, lon2)).kilometers
 
     def check_duplicate_reports(self, validated_data):
         """Check for duplicate reports within a certain radius and time."""
         report_lat = float(validated_data['latitude'])
         report_lon = float(validated_data['longitude'])
         report_type = validated_data['type_of_report']
-        emeregency = validated_data['is_emergency']
 
         is_emergency = validated_data["is_emergency"]
 
@@ -79,6 +75,7 @@ class AddReportSerializer(serializers.ModelSerializer):
         if value and not isinstance(value, str):
             raise serializers.ValidationError("Image path must be a valid string.")
         return value
+    
     def process_image_upload(self, image_data, report_uuid):
         """Process and upload the image to Firebase."""
         try:
@@ -96,8 +93,10 @@ class AddReportSerializer(serializers.ModelSerializer):
         
     def create(self, validated_data):
         try:
-
+            start_checking_duplicate = time.time()
             is_duplicate, duplicate_report = self.check_duplicate_reports(validated_data)
+            end_checking_duplicate = time.time()
+            print(f"Checking for duplicates took {end_checking_duplicate - start_checking_duplicate} seconds.")  # Debugging
             user = self.context['request'].user
             force_submit = validated_data.get('force_submit', "false")
             print("FORECE_SUBMIT: ", validated_data.get('force_submit'))
@@ -195,34 +194,40 @@ class AddReportSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"detail": f"Unknown report type: {report_type}"})
 
                 # Filter for department admins
+            start_find_admins = time.time()
             department_admins = User.objects.filter(
                     role='department_admin',
                     department_id=target_department_id
-            )
+            ).values('id', 'station_address', 'username')
+            end_find_admins = time.time()
+            print(f"Finding admins took {end_find_admins - start_find_admins} seconds.")  # Debugging
             print(f"Found {department_admins.count()} department admins for type '{report_type}'.")  # Debugging
-
-            nearest_admin = None
-            min_distance = float('inf')
-
+            print(f"Department Admins: {department_admins}")  # Debugging
+            nearest_admin, min_distance = None, float('inf')
+            workers = User.objects.filter(role='worker', department_id=target_department_id).values('id', 'station_address', 'username')
             for admin in department_admins:
-                print(f"Checking admin: {admin.username}, Station Address: {admin.station_address}")  # Debugging
-                if admin.station_address:  # Ensure the admin has station coordinates
+                print(f"Checking admin: {admin['username']}, Station Address: {admin['station_address']}")  # Debugging
+                if admin['station_address']:  # Ensure the admin has station coordinates
                     try:
-                        station_lat, station_lon = map(float, admin.station_address.split(','))
+                        station_lat, station_lon = map(float, admin['station_address'].split(','))
                         print(f"Admin Station - Latitude: {station_lat}, Longitude: {station_lon}")  # Debugging
+                        start_calculate_distance = time.time()
                         distance = self.calculate_distance(report_lat, report_lon, station_lat, station_lon)
-                        print(f"Distance to admin {admin.username}: {distance}")  # Debugging
+                        end_calculate_distance = time.time()
+                        print(f"Calculating distance took {end_calculate_distance - start_calculate_distance} seconds.")  # Debugging
+                        print(f"Distance to admin {admin['username']}: {distance}")  # Debugging
 
                         if distance < min_distance:
                             min_distance = distance
                             nearest_admin = admin
-                            print(f"Nearest admin updated to: {admin.username} with distance: {min_distance}")  # Debugging
+                            print(f"Nearest admin updated to: {admin['username']} with distance: {min_distance}")  # Debugging
                     except ValueError as e:
-                        print(f"Error parsing station address for admin {admin.username}: {e}")  # Debugging
+                        print(f"Error parsing station address for admin {admin['username']}: {e}")  # Debugging
 
             if nearest_admin:
-                 print(f"Nearest admin selected: {nearest_admin.username}, Department ID: {nearest_admin.department_id}")  # Debugging
-                 validated_data['assigned_to_id'] = nearest_admin.id
+                 print("Nearest admin found: ", nearest_admin)  # Debugging
+                 print(f"Nearest admin selected: {nearest_admin['username']}, Department ID: {nearest_admin['id']}")  # Debugging
+                 validated_data['assigned_to_id'] = nearest_admin['id']
                  validated_data['status'] = "Ongoing"
             else:
                 print("No suitable admin found.") 
@@ -236,6 +241,7 @@ class AddReportSerializer(serializers.ModelSerializer):
             validated_data["image_path"] = self.process_image_upload(
                 validated_data.get("image_path", ""), report_uuid
             )
+            worker_lists = list(workers)
             report_data = {
                 'report_id': str(report_uuid),
                 'user_id': user.id,
@@ -258,15 +264,22 @@ class AddReportSerializer(serializers.ModelSerializer):
                 'assigned_to_id': validated_data.get('assigned_to_id'),
                 'report_count': validated_data.get('report_count', 1),
                 'usernames': [validated_data.get('username', user.username)],
-                'user_ids': [validated_data.get('user_id', user.id)]
+                'user_ids': [validated_data.get('user_id', user.id)],
+                'workers': worker_lists,
+                'department_id': target_department_id,
             }
 
             # Add the report to Firestore
             collection_path = 'reports'
             document_id = validated_data['type_of_report'].lower()
             try:
+                start_batch = time.time()
+                batch = db.batch()
                 doc_ref = db.collection(collection_path).document(document_id)
-                doc_ref.collection('reports').document(str(report_uuid)).set(report_data)
+                batch.set(doc_ref.collection('reports').document(str(report_uuid)), report_data)
+                batch.commit()
+                end_batch = time.time()
+                print(f"Adding report to Firestore took {end_batch - start_batch} seconds.")  # Debugging
             except Exception as e:
                 print(f"Error adding report to Firestore: {e}")
                 raise e
@@ -290,11 +303,16 @@ class AddReportSerializer(serializers.ModelSerializer):
                 report_date=datetime.now(),
                 assigned_to_id=validated_data.get('assigned_to_id'),
             )
+            start_report_save = time.time()
             report.save()
+            end_report_save = time.time()
+            print(f"Saving the report took {end_report_save - start_report_save} seconds.")  # Debugging
             print(report)
             return report
         except serializers.ValidationError as e:
             raise e
+        
+
 class UpdateReportSerializer(serializers.ModelSerializer):
        
        class Meta:
