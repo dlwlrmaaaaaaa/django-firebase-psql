@@ -11,7 +11,7 @@ ROLE_CHOICES = [
 class IsSuperAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         # Ensure the user is authenticated and has the correct role
-        return request.user.is_authenticated and request.user.role == 'superadmin'
+        return request.user.is_authenticated and request.user.role == 'superadmin' or request.user.role == 'super_admin'
 
 class IsDepartmentAdmin(permissions.BasePermission):
     def has_permission(self, request, view):

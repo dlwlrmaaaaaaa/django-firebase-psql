@@ -1,22 +1,26 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import get_user_model
-
+from django.db import IntegrityError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import Token
 from rest_framework_simplejwt.views import TokenObtainPairView
-from ..utils import get_account_type
+from ..utils import get_account_type, generate_firebase_token
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import status
+from firebase_admin.exceptions import FirebaseError
 import ipaddress
 from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from ..models import Department
-
+from ..models import Department, UserSession
+from app.firebase import db
+import logging
+from django.core.mail import send_mail
+import random
 User = get_user_model()
 
 
@@ -66,6 +70,8 @@ class CitizenSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid IP address format.")
         return value
 
+    from firebase_admin.exceptions import FirebaseError
+
     def create(self, validated_data):
         user = User(
             username=validated_data['username'],
@@ -79,13 +85,35 @@ class CitizenSerializer(serializers.ModelSerializer):
         )
         user.set_password(validated_data['password'])
         user.save()
+
+        # Save non-sensitive data to Firestore
+        user_data = {
+            'username': user.username,
+            'email': user.email,
+            'role': user.role,
+            'contact_number': user.contact_number,
+            'address': user.address,
+            'coordinates': user.coordinates,
+            'ipv': user.ipv,
+            'score': user.score
+        }
+        
+        collection_path = 'users_info'
+        try:
+            doc_ref = db.collection(collection_path).document(user.username)
+            doc_ref.set(user_data)
+        except FirebaseError as e:
+            print(f"Error interacting with Firestore: {e}")
+            raise e
+
         return user
+
 
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
         password_confirm = validated_data.pop('password_confirm', None)
 
-        if password and password_confirm:
+        if password:
             if password != password_confirm:
                 raise serializers.ValidationError({"password_confirm": "Passwords must match."})
             instance.set_password(password)
@@ -222,13 +250,20 @@ class WorkerSerializers(serializers.ModelSerializer):
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
+        logger = logging.getLogger(__name__)
+
         print("Starting token validation...")
 
-        # Debug the incoming attributes
-        print(f"Attributes received: {attrs}")
-
         username = attrs.get('username')
-        username_or_email = User.objects.get(email=username)
+        
+        # Try to find the user by email (avoid SQL injection)
+        try:
+            username_or_email = User.objects.get(email=username)  # Can also try by username if needed
+        except User.DoesNotExist:
+            print(f"User not found: {username}")
+            raise ValidationError({"detail": "Invalid credentials. Please try again."}, 
+                                  code=status.HTTP_401_UNAUTHORIZED)
+        
         password = attrs.get('password')
 
         # Check if username and password are present
@@ -236,12 +271,21 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             print(f"Missing credentials: username_or_email={username_or_email}, password={password}")
             raise ValidationError({"detail": "Both username/email and password are required."}, 
                                   code=status.HTTP_400_BAD_REQUEST)
-
+        
+        if not username_or_email.is_email_verified and username_or_email.role == 'citizen':
+            otp = self.generate_otp()
+            self.send_verification_email(username_or_email.email, otp)
+            
+            username_or_email.otp = otp
+            username_or_email.save()
+            return {
+                "is_email_verified": False,
+            }
         # Try to authenticate the user
         print(f"Attempting to authenticate user: {username_or_email}")
         user = authenticate(
             request=self.context.get('request'),
-            username=username_or_email,
+            username=username_or_email.username,  # Ensure you use the correct identifier here
             password=password
         )
 
@@ -260,11 +304,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 code=status.HTTP_403_FORBIDDEN
             )
 
-        # Log successful authentication
-        print(f"User authenticated successfully: {user}")
-
         self.user = user
         data = super().validate(attrs)
+
+        print(f"User authenticated successfully: {user}")
 
         # Add custom fields to the response
         account_type = get_account_type(self.user)
@@ -284,8 +327,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'is_email_verified': getattr(self.user, 'is_email_verified', False),
             'is_verified': getattr(self.user, 'is_verified', False),
             'score': getattr(self.user, 'score', None),
+            'firebase_token': generate_firebase_token(self.user)
         })
-
+        
         if account_type in ['department_admin', 'worker']:
             print(f"Adding department and supervisor details for: {self.user.username}")
             data.update({
@@ -295,11 +339,27 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 'station': getattr(self.user, 'station', None),
             })
 
-        # Log final response data
-        print(f"Token response data for user {self.user.username}: {data}")
-
         return data
+    def generate_otp(self):
+        return random.randint(100000, 999999)
+    
+    def send_verification_email(self, email, otp):
+        subject = "Verify your email"
+        message = (
+            f"<html>"
+            f"<body>"
+            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
+            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
+            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
+            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
+            f"</body>"
+            f"</html>"
+        )
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [email]
 
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
 
     
 
