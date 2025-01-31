@@ -15,6 +15,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
+from .serializers.department_serializer import DepartmentSerializer
 from .serializers.user_serializers import (
     DepartmentList,
     CitizenSerializer,
@@ -408,6 +409,16 @@ class DepartmentListView(generics.ListAPIView):
     queryset = Department.objects.all()
     serializer_class = DepartmentList
 
+class DepartmentView(generics.DestroyAPIView):
+    permission_classes = [IsSuperAdmin]
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+
+class DepartmentCreateView(generics.CreateAPIView):
+    permission_classes = [IsSuperAdmin]
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+    
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer

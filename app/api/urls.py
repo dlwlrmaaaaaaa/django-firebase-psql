@@ -23,7 +23,9 @@ from .views import (
     ResendOtpDepartment,
     VerifyWorkerEmailView,
     DeleteAccount,
-    GetWorkerUnderDepartmentAdmin
+    GetWorkerUnderDepartmentAdmin,
+    DepartmentView,
+    DepartmentCreateView
 )
 from rest_framework.routers import DefaultRouter
 
@@ -92,6 +94,9 @@ urlpatterns = [
         DeleteReportView.as_view(),
         name="delete-report",
     ),
+
+    path('department/<int:department_id>/delete/', DepartmentView.as_view(), name='delete_department'),
+    path('department/create/', DepartmentCreateView.as_view(), name='create_department'),
     path('verify-email/', VerifyWorkerEmailView.as_view(), name='verify-email'),
 
     path("user/profile/", UserProfileView.as_view(), name="user_profile"),
