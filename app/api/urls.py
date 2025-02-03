@@ -95,7 +95,7 @@ urlpatterns = [
         name="delete-report",
     ),
 
-    path('department/<int:department_id>/delete/', DepartmentView.as_view(), name='delete_department'),
+    path('department/<int:pk>/delete/', DepartmentView.as_view(), name='delete_department'),
     path('department/create/', DepartmentCreateView.as_view(), name='create_department'),
     path('verify-email/', VerifyWorkerEmailView.as_view(), name='verify-email'),
 
