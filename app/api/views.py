@@ -554,14 +554,16 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user  # Retrieve the authenticated user
 
     def update(self, request, *args, **kwargs):
+        print('Request data:', request.data)
         user = self.get_object()
         serializer = self.get_serializer(
             user, data=request.data, partial=True
-        )  # partial=True allows partial updates (e.g. only updating email)
-
+        )  
+        
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        print('Validation errors:', serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

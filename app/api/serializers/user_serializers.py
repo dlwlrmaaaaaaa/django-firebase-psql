@@ -21,6 +21,7 @@ from app.firebase import db
 import logging
 from django.core.mail import send_mail
 import random
+from django.core.validators import RegexValidator
 User = get_user_model()
 
 
@@ -448,7 +449,19 @@ class UsersSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
 #     # full_name = serializers.SerializerMethodField()
-
+    username = serializers.CharField(
+        validators=[
+            RegexValidator(
+                r'^[\w.@+\-\s]+$',  # Added \s to allow spaces
+                'Username may only contain letters, numbers, spaces, and @/./+/-/_ characters.'
+            ),
+        ],
+        error_messages={
+            'invalid': 'Please enter a valid username. Only letters, numbers, spaces, and @/./+/-/_ characters are allowed.',
+            'required': 'Username is required',
+            'max_length': 'Username is too long',
+        }
+    )
     class Meta:
         model = User
         fields = ['username', 'email', 'contact_number', 'role', 'station', 'station_address', 'department_id']  # Only include the desired fields
