@@ -25,7 +25,8 @@ from .views import (
     DeleteAccount,
     GetWorkerUnderDepartmentAdmin,
     DepartmentView,
-    DepartmentCreateView
+    DepartmentCreateView,
+    DeclineVerifyAccount
 )
 from rest_framework.routers import DefaultRouter
 
@@ -110,5 +111,6 @@ urlpatterns = [
     path("worker/profile/", GetWorkerViewSet.as_view(), name="worker_profile"),
     path("worker/accounts/", GetWorkerUnderDepartmentAdmin.as_view(), name="workers"),
     path("verify-user/<int:pk>/", AcceptVerifyAccount.as_view(), name="verify-user"),
+    path("deny-user/<int:pk>/", DeclineVerifyAccount.as_view(), name="deny-user"),
     path("", include(router.urls)),  # Add this line to include the viewsets
 ]
