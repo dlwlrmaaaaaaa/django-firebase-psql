@@ -371,23 +371,21 @@ class CustomTokenRefreshSerializer(TokenRefreshSerializer):
         refresh_token = attrs['refresh']
         token = RefreshToken(refresh_token)
         user_id = token['user_id']
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            raise ValidationError({"detail": "User not found."})
-        account_type = get_account_type(self.user)
+        user = User.objects.get(id=user_id)
+
+        account_type = get_account_type(user)
         data.update({
-            'user_id': self.user.id,
-            'username': self.user.username,
-            'email': self.user.email,
-            'address': getattr(self.user, 'address', None),
-            'coordinates': getattr(self.user, 'coordinates', None),
-            'contact_number': getattr(self.user, 'contact_number', None),
+            'user_id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'address': getattr(user, 'address', None),
+            'coordinates': getattr(user, 'coordinates', None),
+            'contact_number': getattr(user, 'contact_number', None),
             'account_type': account_type,
-            'is_email_verified': getattr(self.user, 'is_email_verified', False),
-            'is_verified': getattr(self.user, 'is_verified', False),
-            'score': getattr(self.user, 'score', 50),
-            'violation': getattr(self.user, 'violation', 0),
+            'is_email_verified': getattr(user, 'is_email_verified', False),
+            'is_verified': getattr(user, 'is_verified', False),
+            'score': getattr(user, 'score', 50),
+            'violation': getattr(user, 'violation', 0),
         })
 
         if account_type in ['department_admin', 'worker']:

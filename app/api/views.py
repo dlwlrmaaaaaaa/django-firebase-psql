@@ -635,11 +635,14 @@ class VerifyAccountView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         # Initialize the serializer with request data
+        VerifyAccount.objects.filter(user=request.user).delete()
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)  # Validate the incoming data
+        serializer.is_valid(raise_exception=True)
 
+
+          
         # Save the new VerifyAccount instance
-        verify_account = serializer.save()
+        verify_account = serializer.save(user=request.user)
 
         return Response(
             {
@@ -685,6 +688,51 @@ class AcceptVerifyAccount(generics.UpdateAPIView):
             # Return success response
             return Response(
                 {"detail": "User successfully verified and score updated."},
+                status=status.HTTP_200_OK,
+            )
+        except ValidationError as e:
+            # Handle validation errors
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            # Handle general errors
+            print(f"Error: {e}")
+            return Response(
+                {"detail": "An error occurred while updating the user."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+class DeclineVerifyAccount(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    permission_classes = [IsSuperAdmin]
+    serializer_class = VerifyUser
+
+    def update(self, request, *args, **kwargs):
+        try:
+            # Fetch the instance
+            instance = self.get_object()
+
+            # Logging for debugging
+            print(
+                f"Before update: is_verified={instance.is_verified}, score={instance.score}"
+            )
+
+            # Update fields
+            instance.is_verified = False
+            instance.score = instance.score 
+
+            # Save changes to the database
+            instance.save(update_fields=["is_verified", "score"])
+
+            # Save using serializer to handle extra validation or custom logic
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+
+            print(
+                f"After update: is_verified={instance.is_verified}, score={instance.score}"
+            )
+            return Response(
+                {"detail": "User verification declined and score updated."},
                 status=status.HTTP_200_OK,
             )
         except ValidationError as e:
