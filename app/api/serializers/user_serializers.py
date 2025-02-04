@@ -362,8 +362,91 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         send_mail(subject, message, from_email, recipient_list, html_message=message)
 
-    
 
+class ForgotPasswordSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True)
+    class Meta: 
+        model = User
+        fields = ['email']
+    
+    def validate(self, attrs):
+        email = attrs['email']
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"email": "User with this email does not exist."})
+        otp = self.generate_otp()
+        user.otp = otp
+        user.save()
+        self.send_verification_email(email, otp)    
+        return {"message": "An OTP has been sent to your email."}
+
+    def generate_otp(self):
+        return random.randint(100000, 999999)
+    
+    def send_verification_email(self, email, otp):
+        subject = "Verify your email"
+        message = (
+            f"<html>"
+            f"<body>"
+            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Change Password Request</p>"
+            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
+            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
+            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
+            f"</body>"
+            f"</html>"
+        )
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [email]
+
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
+
+class VerifyOtpSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ['otp', 'email']
+    
+    def validate(self, attrs):
+        otp = attrs['otp']
+        email = attrs['email']
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"email": "User not found."})
+        if user.otp != otp:
+            raise serializers.ValidationError({"otp": "Invalid OTP."})
+        return {"message": "OTP verified successfully."}
+
+class ResetPasswordSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(required=True, write_only=True)
+    password_confirm = serializers.CharField(required=True, write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['email', 'password', 'password_confirm']
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def validate(self, attrs):
+        password = attrs.get('password')  
+        password_confirm = attrs.pop('password_confirm') 
+        email = attrs.get('email')
+        if not password or not password_confirm:
+            raise serializers.ValidationError({"password": "Password fields cannot be empty."})
+
+        if password != password_confirm:
+            raise serializers.ValidationError({"password": "Passwords do not match."})
+
+        user = User.objects.filter(email=email).first()  # Use `.filter().first()` to avoid exceptions
+        if not user:
+            raise serializers.ValidationError({"email": "User with this email does not exist."})
+
+        user.set_password(password)
+        user.otp = None  # Clear OTP after successful reset
+        user.save()
+
+        return {"message": "Password reset successfully."}
 
 class CustomTokenRefreshSerializer(TokenRefreshSerializer):
     def validate(self, attrs):

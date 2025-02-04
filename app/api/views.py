@@ -26,7 +26,10 @@ from .serializers.user_serializers import (
     ChangePasswordSerializer,
     WorkerSerializers,
     UsersSerializer,
-    GetWorkersSerializer
+    GetWorkersSerializer,
+    ForgotPasswordSerializer,
+    VerifyOtpSerializer,
+    ResetPasswordSerializer
 )
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .serializers.fire_serializer import FirePredictionSerializer
@@ -838,3 +841,30 @@ def get_department_details(request, assigned_to_id):
         })
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+    
+class VerifyOTPView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = VerifyOtpSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({"message": "OTP verified successfully."}, status=200)
+
+class ForgotPasswordView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ForgotPasswordSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({"message": "Password reset code sent succesfully"}, status=200)
+
+class ResetPasswordView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ResetPasswordSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({"message": "Password reset successfully"}, status=200)
