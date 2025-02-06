@@ -26,7 +26,10 @@ from .views import (
     GetWorkerUnderDepartmentAdmin,
     DepartmentView,
     DepartmentCreateView,
-    DeclineVerifyAccount
+    DeclineVerifyAccount,
+    VerifyOTPView,
+    ForgotPasswordView,
+    ResetPasswordView
 )
 from rest_framework.routers import DefaultRouter
 
@@ -113,4 +116,10 @@ urlpatterns = [
     path("verify-user/<int:pk>/", AcceptVerifyAccount.as_view(), name="verify-user"),
     path("deny-user/<int:pk>/", DeclineVerifyAccount.as_view(), name="deny-user"),
     path("", include(router.urls)),  # Add this line to include the viewsets
+
+
+    #Forgot Password
+    path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
+    path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
 ]
