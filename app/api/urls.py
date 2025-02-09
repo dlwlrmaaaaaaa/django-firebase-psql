@@ -29,7 +29,8 @@ from .views import (
     DeclineVerifyAccount,
     VerifyOTPView,
     ForgotPasswordView,
-    ResetPasswordView
+    ResetPasswordView,
+    ExportAllReports
 )
 from rest_framework.routers import DefaultRouter
 
@@ -122,4 +123,6 @@ urlpatterns = [
     path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
     path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
+
+    path('export-all-reports/', ExportAllReports.as_view(), name='export_weekly_reports'),
 ]
