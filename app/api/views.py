@@ -920,7 +920,7 @@ class ResetPasswordView(generics.GenericAPIView):
 #             return Response({"error": str(e)}, status=500)
         
 class ExportAllReports(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsSuperAdmin]
 
     def get(self, request, *args, **kwargs):
         try:
@@ -956,3 +956,9 @@ class ExportAllReports(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=500)
+
+
+class BackupData(APIView):
+    permission_classes = [IsSuperAdmin]
+
+    
