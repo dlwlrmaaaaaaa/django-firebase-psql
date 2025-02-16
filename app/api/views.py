@@ -56,9 +56,10 @@ from app.firebase import db
 from firebase_admin import firestore
 from django.http import JsonResponse
 from .models import User, Department
-
+import datetime
+from datetime import timedelta
 User = get_user_model()
-
+import csv
 import os
 import joblib
 from rest_framework.response import Response
@@ -868,3 +869,96 @@ class ResetPasswordView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response({"message": "Password reset successfully"}, status=200)
+
+# class ExportWeeklyReports(APIView):
+#     permission_classes = [AllowAny]
+#     def get(self, request, *args, **kwargs):
+#         try:
+#             today = datetime.datetime.today() 
+#             start_of_month = datetime.datetime(today.year, today.month, 1)
+#             next_month = today.month % 12 + 1  # Handle December (12 → 1)
+#             next_month_year = today.year + (1 if today.month == 12 else 0)
+#             end_of_month = datetime.datetime(next_month_year, next_month, 1) - datetime.timedelta(seconds=1)
+
+#             reports_ref = db.collection('reports')
+#             categories = reports_ref.list_documents()
+
+#             reports = []
+
+#             for category in categories: 
+#                 category_name = category.id
+#                 docs = category.collection(category_name).where('timestamp', '>=', start_of_month).where('timestamp', '<=', end_of_month).stream()
+                
+#                 for doc in docs:
+#                     data = doc.to_dict()
+
+#                     # Convert Firestore Timestamp to Python datetime
+#                     timestamp = data.get('timestamp')
+#                     if isinstance(timestamp, firestore.Timestamp):
+#                         timestamp = timestamp.to_datetime()
+
+#                     reports.append({
+#                         "Report ID": doc.id,
+#                         "Category": category_name,  # Add category name
+#                         "Timestamp": timestamp,
+#                         "Details": data.get('details', 'No details')
+#                     })
+
+#             if not reports:
+#                 return Response({"message": "No reports found for this month"}, status=200)
+
+#             df = pd.DataFrame(reports)
+
+#             # Export as CSV
+#             response = HttpResponse(content_type='text/csv')
+#             response['Content-Disposition'] = 'attachment; filename="monthly_reports.csv"'
+#             df.to_csv(response, index=False)
+            
+#             return response
+
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=500)
+        
+class ExportAllReports(APIView):
+    permission_classes = [IsSuperAdmin]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            db = firestore.client()
+            reports_ref = db.collection('reports')
+            categories = reports_ref.list_documents()
+
+            reports = []
+
+            for category in categories:
+                category_name = category.id  # fire_accident, fallen_tree, etc.
+
+                # 🔹 Get the 'reports' subcollection inside each category
+                reports_collection = category.collection('reports')
+                docs = reports_collection.stream()
+
+                for doc in docs:
+                    data = doc.to_dict()
+                    reports.append(data)
+
+            if not reports:
+                return Response({"message": "No reports found"}, status=200)
+
+            # 🔹 Convert to Pandas DataFrame
+            df = pd.DataFrame(reports)
+
+            # 🔹 Export as CSV
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="all_reports.csv"'
+            df.to_csv(response, index=False)
+
+            return response
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+
+class BackupData(APIView):
+    permission_classes = [IsSuperAdmin]
+
+    
