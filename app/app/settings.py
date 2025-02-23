@@ -115,14 +115,14 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'backend',
-        # 'USER': 'postgres',
-        # 'PASSWORD': '0713',
-        # 'HOST': 'localhost',
-        # 'PORT': '5432'
+        'USER': 'postgres',
+        'PASSWORD': '0713',
+        'HOST': 'localhost',
+        'PORT': '5432'
     }
 }
 
-DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_efq8_user:PBtfXC77iElTxeRKEpzb2Fki3Cc4b23Q@dpg-cu64622j1k6c73f45dc0-a.singapore-postgres.render.com/crisp_postgresql_db_efq8')
+# DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_efq8_user:PBtfXC77iElTxeRKEpzb2Fki3Cc4b23Q@dpg-cu64622j1k6c73f45dc0-a.singapore-postgres.render.com/crisp_postgresql_db_efq8')
 # Username: crisp_postgresql_db_efq8_user
 # Password: PBtfXC77iElTxeRKEpzb2Fki3Cc4b23Q
 # Host: dpg-cu64622j1k6c73f45dc0-a.singapore-postgres.render.com

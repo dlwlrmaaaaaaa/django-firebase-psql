@@ -22,6 +22,7 @@ import logging
 from django.core.mail import send_mail
 import random
 from django.core.validators import RegexValidator
+from django.core.validators import validate_email
 User = get_user_model()
 
 
@@ -50,7 +51,7 @@ class CitizenSerializer(serializers.ModelSerializer):
         error_messages={'required': 'Password confirmation is required.'}
     )
     contact_number = serializers.CharField(
-        required=True,
+        required=False,
         allow_blank=False,
         validators=[UniqueValidator(queryset=User.objects.all(), message="This contact number is already in use.")]
     )
@@ -60,20 +61,47 @@ class CitizenSerializer(serializers.ModelSerializer):
         fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv', 'score']
 
     def validate(self, attrs):
+        """Ensure password confirmation matches"""
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({'password_confirm': 'Passwords do not match.'})
         return attrs
 
     def validate_ipv(self, value):
+        """Validate IP Address format"""
         try:
             ipaddress.ip_address(value)
         except ValueError:
             raise serializers.ValidationError("Invalid IP address format.")
         return value
 
-    from firebase_admin.exceptions import FirebaseError
+    def validate_email(self, value):
+ 
+        try:
+            validate_email(value)
+        except ValidationError:
+            raise serializers.ValidationError("Enter a valid email address.")
+
+        # Split the domain part from the email.
+        try:
+            local_part, domain = value.rsplit('@', 1)
+        except ValueError:
+            raise serializers.ValidationError("Enter a valid email address.")
+
+        # Split the domain into parts.
+        domain_parts = domain.split('.')
+        if len(domain_parts) < 2:
+            raise serializers.ValidationError("Enter a valid email address.")
+
+        # For example, enforce that the TLD is exactly "com"
+        if domain_parts[-1].lower() != "com":
+            raise serializers.ValidationError("Email must end with .com")
+
+        return value
+
+
 
     def create(self, validated_data):
+        """Create user and save data to Firestore"""
         user = User(
             username=validated_data['username'],
             email=validated_data['email'],
@@ -82,7 +110,7 @@ class CitizenSerializer(serializers.ModelSerializer):
             address=validated_data.get('address'),
             coordinates=validated_data.get('coordinates'),
             ipv=validated_data.get('ipv'),
-            score=50
+            score=50  # Default score
         )
         user.set_password(validated_data['password'])
         user.save()
@@ -101,16 +129,14 @@ class CitizenSerializer(serializers.ModelSerializer):
         
         collection_path = 'users_info'
         try:
-            doc_ref = db.collection(collection_path).document(user.username)
-            doc_ref.set(user_data)
-        except FirebaseError as e:
-            print(f"Error interacting with Firestore: {e}")
-            raise e
+            db.collection(collection_path).document(user.username).set(user_data)
+        except Exception as e:
+            print(f"Firestore Error: {e}")
 
         return user
 
-
     def update(self, instance, validated_data):
+        """Update user details"""
         password = validated_data.pop('password', None)
         password_confirm = validated_data.pop('password_confirm', None)
 
