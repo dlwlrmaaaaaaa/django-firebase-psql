@@ -181,6 +181,7 @@ class AssignRoleView(generics.CreateAPIView):
 
 class CitizenRegitsration(generics.CreateAPIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = CitizenSerializer
 
     def create(self, request, *args, **kwargs):
@@ -514,7 +515,7 @@ class SomeView(APIView):
 class OTPVerificationView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = OTPVerificationSerializer  # Use the updated serializer
-
+    authentication_classes = []
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)  # Validate incoming data
@@ -767,26 +768,26 @@ class DepartmentHeadViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DepartmentAdminSerializer
     # permission_classes = [IsAuthenticated]
     permission_classes = [AllowAny]
-
+    authentication_classes = []
 
 class SuperAdminViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.filter(role="superadmin")  # Filter for Admins
     serializer_class = WorkerSerializers
     # permission_classes = [IsAuthenticated]
     permission_classes = [AllowAny]
-
+    authentication_classes = []
 
 class WorkersViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.filter(role="worker")
     serializer_class = WorkerSerializers
     # permission_classes = [IsAuthenticated]
     permission_classes = [AllowAny]
-
+    authentication_classes = []
 
 class UsersViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UsersSerializer
     permission_classes = [AllowAny]
-
+    authentication_classes = []
     def get_queryset(self):
 
         return User.objects.filter(
@@ -846,7 +847,7 @@ def get_department_details(request, assigned_to_id):
 class VerifyOTPView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = VerifyOtpSerializer
-
+    authentication_classes = []
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -855,7 +856,7 @@ class VerifyOTPView(generics.GenericAPIView):
 class ForgotPasswordView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = ForgotPasswordSerializer
-
+    authentication_classes = []
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -864,7 +865,7 @@ class ForgotPasswordView(generics.GenericAPIView):
 class ResetPasswordView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = ResetPasswordSerializer
-
+    authentication_classes = []
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
