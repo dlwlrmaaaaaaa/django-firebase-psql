@@ -15,6 +15,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from .permission import IsSuperAdmin, IsDepartmentAdmin, IsCitizen
+from .serializers.department_serializer import DepartmentSerializer
 from .serializers.user_serializers import (
     DepartmentList,
     CitizenSerializer,
@@ -25,7 +26,10 @@ from .serializers.user_serializers import (
     ChangePasswordSerializer,
     WorkerSerializers,
     UsersSerializer,
-    GetWorkersSerializer
+    GetWorkersSerializer,
+    ForgotPasswordSerializer,
+    VerifyOtpSerializer,
+    ResetPasswordSerializer
 )
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .serializers.fire_serializer import FirePredictionSerializer
@@ -52,9 +56,10 @@ from app.firebase import db
 from firebase_admin import firestore
 from django.http import JsonResponse
 from .models import User, Department
-
+import datetime
+from datetime import timedelta
 User = get_user_model()
-
+import csv
 import os
 import joblib
 from rest_framework.response import Response
@@ -176,13 +181,12 @@ class AssignRoleView(generics.CreateAPIView):
 
 class CitizenRegitsration(generics.CreateAPIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = CitizenSerializer
 
     def create(self, request, *args, **kwargs):
         print("Request data:", request.data)
         serializer = self.get_serializer(data=request.data)
-        # Check if the serializer is valid
-        # Check if the serializer is valid
         if not serializer.is_valid():
             print("Validation errors:", serializer.errors)  # Log the errors
             return Response(serializer.errors, status=400)
@@ -410,9 +414,20 @@ class DepartmentListView(generics.ListAPIView):
     queryset = Department.objects.all()
     serializer_class = DepartmentList
 
+class DepartmentView(generics.DestroyAPIView):
+    permission_classes = [IsSuperAdmin]
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+
+class DepartmentCreateView(generics.CreateAPIView):
+    permission_classes = [IsSuperAdmin]
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+    
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
 
 
 class MyRefreshTokenPair(TokenRefreshView):
@@ -500,7 +515,7 @@ class SomeView(APIView):
 class OTPVerificationView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = OTPVerificationSerializer  # Use the updated serializer
-
+    authentication_classes = []
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)  # Validate incoming data
@@ -544,14 +559,16 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user  # Retrieve the authenticated user
 
     def update(self, request, *args, **kwargs):
+        print('Request data:', request.data)
         user = self.get_object()
         serializer = self.get_serializer(
             user, data=request.data, partial=True
-        )  # partial=True allows partial updates (e.g. only updating email)
-
+        )  
+        
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        print('Validation errors:', serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -625,11 +642,14 @@ class VerifyAccountView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         # Initialize the serializer with request data
+        VerifyAccount.objects.filter(user=request.user).delete()
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)  # Validate the incoming data
+        serializer.is_valid(raise_exception=True)
 
+
+          
         # Save the new VerifyAccount instance
-        verify_account = serializer.save()
+        verify_account = serializer.save(user=request.user)
 
         return Response(
             {
@@ -688,6 +708,51 @@ class AcceptVerifyAccount(generics.UpdateAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+class DeclineVerifyAccount(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    permission_classes = [IsSuperAdmin]
+    serializer_class = VerifyUser
+
+    def update(self, request, *args, **kwargs):
+        try:
+            # Fetch the instance
+            instance = self.get_object()
+
+            # Logging for debugging
+            print(
+                f"Before update: is_verified={instance.is_verified}, score={instance.score}"
+            )
+
+            # Update fields
+            instance.is_verified = False
+            instance.score = instance.score 
+
+            # Save changes to the database
+            instance.save(update_fields=["is_verified", "score"])
+
+            # Save using serializer to handle extra validation or custom logic
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+
+            print(
+                f"After update: is_verified={instance.is_verified}, score={instance.score}"
+            )
+            return Response(
+                {"detail": "User verification declined and score updated."},
+                status=status.HTTP_200_OK,
+            )
+        except ValidationError as e:
+            # Handle validation errors
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            # Handle general errors
+            print(f"Error: {e}")
+            return Response(
+                {"detail": "An error occurred while updating the user."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
 
 class CitizenViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.filter(role="citizen")  # Filter for citizens
@@ -703,26 +768,26 @@ class DepartmentHeadViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DepartmentAdminSerializer
     # permission_classes = [IsAuthenticated]
     permission_classes = [AllowAny]
-
+    authentication_classes = []
 
 class SuperAdminViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.filter(role="superadmin")  # Filter for Admins
     serializer_class = WorkerSerializers
     # permission_classes = [IsAuthenticated]
     permission_classes = [AllowAny]
-
+    authentication_classes = []
 
 class WorkersViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.filter(role="worker")
     serializer_class = WorkerSerializers
     # permission_classes = [IsAuthenticated]
     permission_classes = [AllowAny]
-
+    authentication_classes = []
 
 class UsersViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UsersSerializer
     permission_classes = [AllowAny]
-
+    authentication_classes = []
     def get_queryset(self):
 
         return User.objects.filter(
@@ -778,3 +843,123 @@ def get_department_details(request, assigned_to_id):
         })
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+    
+class VerifyOTPView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = VerifyOtpSerializer
+    authentication_classes = []
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({"message": "OTP verified successfully."}, status=200)
+
+class ForgotPasswordView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ForgotPasswordSerializer
+    authentication_classes = []
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({"message": "Password reset code sent succesfully"}, status=200)
+
+class ResetPasswordView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ResetPasswordSerializer
+    authentication_classes = []
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({"message": "Password reset successfully"}, status=200)
+
+# class ExportWeeklyReports(APIView):
+#     permission_classes = [AllowAny]
+#     def get(self, request, *args, **kwargs):
+#         try:
+#             today = datetime.datetime.today() 
+#             start_of_month = datetime.datetime(today.year, today.month, 1)
+#             next_month = today.month % 12 + 1  # Handle December (12 → 1)
+#             next_month_year = today.year + (1 if today.month == 12 else 0)
+#             end_of_month = datetime.datetime(next_month_year, next_month, 1) - datetime.timedelta(seconds=1)
+
+#             reports_ref = db.collection('reports')
+#             categories = reports_ref.list_documents()
+
+#             reports = []
+
+#             for category in categories: 
+#                 category_name = category.id
+#                 docs = category.collection(category_name).where('timestamp', '>=', start_of_month).where('timestamp', '<=', end_of_month).stream()
+                
+#                 for doc in docs:
+#                     data = doc.to_dict()
+
+#                     # Convert Firestore Timestamp to Python datetime
+#                     timestamp = data.get('timestamp')
+#                     if isinstance(timestamp, firestore.Timestamp):
+#                         timestamp = timestamp.to_datetime()
+
+#                     reports.append({
+#                         "Report ID": doc.id,
+#                         "Category": category_name,  # Add category name
+#                         "Timestamp": timestamp,
+#                         "Details": data.get('details', 'No details')
+#                     })
+
+#             if not reports:
+#                 return Response({"message": "No reports found for this month"}, status=200)
+
+#             df = pd.DataFrame(reports)
+
+#             # Export as CSV
+#             response = HttpResponse(content_type='text/csv')
+#             response['Content-Disposition'] = 'attachment; filename="monthly_reports.csv"'
+#             df.to_csv(response, index=False)
+            
+#             return response
+
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=500)
+        
+class ExportAllReports(APIView):
+    permission_classes = [IsSuperAdmin]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            db = firestore.client()
+            reports_ref = db.collection('reports')
+            categories = reports_ref.list_documents()
+
+            reports = []
+
+            for category in categories:
+                category_name = category.id  # fire_accident, fallen_tree, etc.
+
+                # 🔹 Get the 'reports' subcollection inside each category
+                reports_collection = category.collection('reports')
+                docs = reports_collection.stream()
+
+                for doc in docs:
+                    data = doc.to_dict()
+                    reports.append(data)
+
+            if not reports:
+                return Response({"message": "No reports found"}, status=200)
+
+            # 🔹 Convert to Pandas DataFrame
+            df = pd.DataFrame(reports)
+
+            # 🔹 Export as CSV
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="all_reports.csv"'
+            df.to_csv(response, index=False)
+
+            return response
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+
+class BackupData(APIView):
+    permission_classes = [IsSuperAdmin]
+
+    

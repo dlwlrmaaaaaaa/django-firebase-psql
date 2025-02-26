@@ -23,7 +23,14 @@ from .views import (
     ResendOtpDepartment,
     VerifyWorkerEmailView,
     DeleteAccount,
-    GetWorkerUnderDepartmentAdmin
+    GetWorkerUnderDepartmentAdmin,
+    DepartmentView,
+    DepartmentCreateView,
+    DeclineVerifyAccount,
+    VerifyOTPView,
+    ForgotPasswordView,
+    ResetPasswordView,
+    ExportAllReports
 )
 from rest_framework.routers import DefaultRouter
 
@@ -92,6 +99,9 @@ urlpatterns = [
         DeleteReportView.as_view(),
         name="delete-report",
     ),
+
+    path('department/<int:pk>/delete/', DepartmentView.as_view(), name='delete_department'),
+    path('department/create/', DepartmentCreateView.as_view(), name='create_department'),
     path('verify-email/', VerifyWorkerEmailView.as_view(), name='verify-email'),
 
     path("user/profile/", UserProfileView.as_view(), name="user_profile"),
@@ -105,5 +115,14 @@ urlpatterns = [
     path("worker/profile/", GetWorkerViewSet.as_view(), name="worker_profile"),
     path("worker/accounts/", GetWorkerUnderDepartmentAdmin.as_view(), name="workers"),
     path("verify-user/<int:pk>/", AcceptVerifyAccount.as_view(), name="verify-user"),
+    path("deny-user/<int:pk>/", DeclineVerifyAccount.as_view(), name="deny-user"),
     path("", include(router.urls)),  # Add this line to include the viewsets
+
+
+    #Forgot Password
+    path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
+    path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
+
+    path('export-all-reports/', ExportAllReports.as_view(), name='export_weekly_reports'),
 ]

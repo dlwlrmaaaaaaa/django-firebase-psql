@@ -30,7 +30,7 @@ ALLOWED_HOSTS = ['*']
 # EMAIL VERIFICATION
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'  # Replace with your email host
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'mikhaelacutie08@gmail.com'
@@ -64,8 +64,8 @@ REST_FRAMEWORK = {
 
 from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30), 
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=90), 
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -122,7 +122,13 @@ DATABASES = {
     }
 }
 
-# DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_user:fjhpNQohlSlkANEP9LgpRnBDjAIulvhI@dpg-ct1cm768ii6s73feka0g-a.singapore-postgres.render.com/crisp_postgresql_db')
+# DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_efq8_user:PBtfXC77iElTxeRKEpzb2Fki3Cc4b23Q@dpg-cu64622j1k6c73f45dc0-a.singapore-postgres.render.com/crisp_postgresql_db_efq8')
+# Username: crisp_postgresql_db_efq8_user
+# Password: PBtfXC77iElTxeRKEpzb2Fki3Cc4b23Q
+# Host: dpg-cu64622j1k6c73f45dc0-a.singapore-postgres.render.com
+# Database: crisp_postgresql_db_efq8 
+
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -180,6 +186,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://172.20.10.7:8081",
     "http://192.168.1.17:8081",
     'http://192.168.100.15:8081',
+    'http://192.168.100.15:8000',
+    'http://192.168.100.20:8081',
     'http://192.168.254.179:8081',
     "http://localhost:8000",
     "http://localhost:8081",

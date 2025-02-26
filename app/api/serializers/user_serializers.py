@@ -19,7 +19,10 @@ from rest_framework import serializers
 from ..models import Department, UserSession
 from app.firebase import db
 import logging
-
+from django.core.mail import send_mail
+import random
+from django.core.validators import RegexValidator
+from django.core.validators import validate_email
 User = get_user_model()
 
 
@@ -48,7 +51,7 @@ class CitizenSerializer(serializers.ModelSerializer):
         error_messages={'required': 'Password confirmation is required.'}
     )
     contact_number = serializers.CharField(
-        required=True,
+        required=False,
         allow_blank=False,
         validators=[UniqueValidator(queryset=User.objects.all(), message="This contact number is already in use.")]
     )
@@ -58,20 +61,47 @@ class CitizenSerializer(serializers.ModelSerializer):
         fields = ['username', 'email', 'password', 'password_confirm', 'contact_number', 'address', 'coordinates', 'ipv', 'score']
 
     def validate(self, attrs):
+        """Ensure password confirmation matches"""
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({'password_confirm': 'Passwords do not match.'})
         return attrs
 
     def validate_ipv(self, value):
+        """Validate IP Address format"""
         try:
             ipaddress.ip_address(value)
         except ValueError:
             raise serializers.ValidationError("Invalid IP address format.")
         return value
 
-    from firebase_admin.exceptions import FirebaseError
+    def validate_email(self, value):
+ 
+        try:
+            validate_email(value)
+        except ValidationError:
+            raise serializers.ValidationError("Enter a valid email address.")
+
+        # Split the domain part from the email.
+        try:
+            local_part, domain = value.rsplit('@', 1)
+        except ValueError:
+            raise serializers.ValidationError("Enter a valid email address.")
+
+        # Split the domain into parts.
+        domain_parts = domain.split('.')
+        if len(domain_parts) < 2:
+            raise serializers.ValidationError("Enter a valid email address.")
+
+        # For example, enforce that the TLD is exactly "com"
+        if domain_parts[-1].lower() != "com":
+            raise serializers.ValidationError("Email must end with .com")
+
+        return value
+
+
 
     def create(self, validated_data):
+        """Create user and save data to Firestore"""
         user = User(
             username=validated_data['username'],
             email=validated_data['email'],
@@ -80,7 +110,7 @@ class CitizenSerializer(serializers.ModelSerializer):
             address=validated_data.get('address'),
             coordinates=validated_data.get('coordinates'),
             ipv=validated_data.get('ipv'),
-            score=50
+            score=50  # Default score
         )
         user.set_password(validated_data['password'])
         user.save()
@@ -99,16 +129,14 @@ class CitizenSerializer(serializers.ModelSerializer):
         
         collection_path = 'users_info'
         try:
-            doc_ref = db.collection(collection_path).document(user.username)
-            doc_ref.set(user_data)
-        except FirebaseError as e:
-            print(f"Error interacting with Firestore: {e}")
-            raise e
+            db.collection(collection_path).document(user.username).set(user_data)
+        except Exception as e:
+            print(f"Firestore Error: {e}")
 
         return user
 
-
     def update(self, instance, validated_data):
+        """Update user details"""
         password = validated_data.pop('password', None)
         password_confirm = validated_data.pop('password_confirm', None)
 
@@ -270,7 +298,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             print(f"Missing credentials: username_or_email={username_or_email}, password={password}")
             raise ValidationError({"detail": "Both username/email and password are required."}, 
                                   code=status.HTTP_400_BAD_REQUEST)
-
+        
+        if not username_or_email.is_email_verified and username_or_email.role == 'citizen':
+            otp = self.generate_otp()
+            self.send_verification_email(username_or_email.email, otp)
+            
+            username_or_email.otp = otp
+            username_or_email.save()
+            return {
+                "is_email_verified": False,
+            }
         # Try to authenticate the user
         print(f"Attempting to authenticate user: {username_or_email}")
         user = authenticate(
@@ -293,23 +330,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 {"detail": "User account is disabled."},
                 code=status.HTTP_403_FORBIDDEN
             )
-
-        # Handle sessions securely
-        # existing_session = UserSession.objects.filter(user=user).first()
-        # if existing_session:
-        #     print(f"Invalidating previous session for user: {user.username}")
-        #     existing_session.delete()  # Invalidate the old session
-
-        # Create a new session for the current login
-        # user_agent = self.context.get('request').META.get('HTTP_USER_AGENT', '')
-        # new_session = UserSession(user=user, device_id=user_agent)
-        
-        # try:
-        #     new_session.save()
-        # except IntegrityError as e:
-        #     logger.error(f"Error saving session: {e}")
-        #     raise ValidationError({"detail": "Error while saving session. Please try again."}, 
-        #                           code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         self.user = user
         data = super().validate(attrs)
@@ -336,7 +356,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'score': getattr(self.user, 'score', None),
             'firebase_token': generate_firebase_token(self.user)
         })
-
+        
         if account_type in ['department_admin', 'worker']:
             print(f"Adding department and supervisor details for: {self.user.username}")
             data.update({
@@ -347,10 +367,112 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             })
 
         return data
-
-
+    def generate_otp(self):
+        return random.randint(100000, 999999)
     
+    def send_verification_email(self, email, otp):
+        subject = "Verify your email"
+        message = (
+            f"<html>"
+            f"<body>"
+            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Verify your account. </p>"
+            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
+            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
+            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
+            f"</body>"
+            f"</html>"
+        )
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [email]
 
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
+
+
+class ForgotPasswordSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True)
+    class Meta: 
+        model = User
+        fields = ['email']
+    
+    def validate(self, attrs):
+        email = attrs['email']
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"email": "User with this email does not exist."})
+        otp = self.generate_otp()
+        user.otp = otp
+        user.save()
+        self.send_verification_email(email, otp)    
+        return {"message": "An OTP has been sent to your email."}
+
+    def generate_otp(self):
+        return random.randint(100000, 999999)
+    
+    def send_verification_email(self, email, otp):
+        subject = "Verify your email"
+        message = (
+            f"<html>"
+            f"<body>"
+            f"<p style='font-weight: bold; color: #0C3B2D; text-align: left; font-size: 1.25em; '>Change Password Request</p>"
+            f"<p style='text-align: center; font-size: 0.85em; '>Your CRISP OTP code is:</p>"
+            f"<p style='font-weight: bolder; color: #0C3B2D; text-align: center; font-size: 2em; '>{otp}</p>"
+            f"<p style='text-align: center; font-size: 0.75em; '>Valid for 15 mins. NEVER share this code with others. <br>If you did not request this, please ignore this email.</p>"
+            f"<p style='text-align: left; font-size: 0.75em; '>Best regards,<br>The CRISP Team</p>"
+            f"</body>"
+            f"</html>"
+        )
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [email]
+
+        send_mail(subject, message, from_email, recipient_list, html_message=message)
+
+class VerifyOtpSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ['otp', 'email']
+    
+    def validate(self, attrs):
+        otp = attrs['otp']
+        email = attrs['email']
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"email": "User not found."})
+        if user.otp != otp:
+            raise serializers.ValidationError({"otp": "Invalid OTP."})
+        return {"message": "OTP verified successfully."}
+
+class ResetPasswordSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(required=True, write_only=True)
+    password_confirm = serializers.CharField(required=True, write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['email', 'password', 'password_confirm']
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def validate(self, attrs):
+        password = attrs.get('password')  
+        password_confirm = attrs.pop('password_confirm') 
+        email = attrs.get('email')
+        if not password or not password_confirm:
+            raise serializers.ValidationError({"password": "Password fields cannot be empty."})
+
+        if password != password_confirm:
+            raise serializers.ValidationError({"password": "Passwords do not match."})
+
+        user = User.objects.filter(email=email).first()  # Use `.filter().first()` to avoid exceptions
+        if not user:
+            raise serializers.ValidationError({"email": "User with this email does not exist."})
+
+        user.set_password(password)
+        user.otp = None  # Clear OTP after successful reset
+        user.save()
+
+        return {"message": "Password reset successfully."}
 
 class CustomTokenRefreshSerializer(TokenRefreshSerializer):
     def validate(self, attrs):
@@ -359,23 +481,21 @@ class CustomTokenRefreshSerializer(TokenRefreshSerializer):
         refresh_token = attrs['refresh']
         token = RefreshToken(refresh_token)
         user_id = token['user_id']
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            raise ValidationError({"detail": "User not found."})
-        account_type = get_account_type(self.user)
+        user = User.objects.get(id=user_id)
+
+        account_type = get_account_type(user)
         data.update({
-            'user_id': self.user.id,
-            'username': self.user.username,
-            'email': self.user.email,
-            'address': getattr(self.user, 'address', None),
-            'coordinates': getattr(self.user, 'coordinates', None),
-            'contact_number': getattr(self.user, 'contact_number', None),
+            'user_id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'address': getattr(user, 'address', None),
+            'coordinates': getattr(user, 'coordinates', None),
+            'contact_number': getattr(user, 'contact_number', None),
             'account_type': account_type,
-            'is_email_verified': getattr(self.user, 'is_email_verified', False),
-            'is_verified': getattr(self.user, 'is_verified', False),
-            'score': getattr(self.user, 'score', 50),
-            'violation': getattr(self.user, 'violation', 0),
+            'is_email_verified': getattr(user, 'is_email_verified', False),
+            'is_verified': getattr(user, 'is_verified', False),
+            'score': getattr(user, 'score', 50),
+            'violation': getattr(user, 'violation', 0),
         })
 
         if account_type in ['department_admin', 'worker']:
@@ -438,7 +558,19 @@ class UsersSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
 #     # full_name = serializers.SerializerMethodField()
-
+    username = serializers.CharField(
+        validators=[
+            RegexValidator(
+                r'^[\w.@+\-\s]+$',  # Added \s to allow spaces
+                'Username may only contain letters, numbers, spaces, and @/./+/-/_ characters.'
+            ),
+        ],
+        error_messages={
+            'invalid': 'Please enter a valid username. Only letters, numbers, spaces, and @/./+/-/_ characters are allowed.',
+            'required': 'Username is required',
+            'max_length': 'Username is too long',
+        }
+    )
     class Meta:
         model = User
         fields = ['username', 'email', 'contact_number', 'role', 'station', 'station_address', 'department_id']  # Only include the desired fields
