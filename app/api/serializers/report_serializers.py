@@ -35,7 +35,14 @@ class AddReportSerializer(serializers.ModelSerializer):
         report_lat = float(validated_data['latitude'])
         report_lon = float(validated_data['longitude'])
         report_type = validated_data['type_of_report']
-        time_threshold = datetime.now() - timedelta(minutes=60)
+        emeregency = validated_data['is_emergency']
+
+        if emeregency == "emergency":
+            time_threshold = datetime.now() - timedelta(minutes=60)
+        else:
+            time_threshold = datetime.now() - timedelta(days=2)
+        
+        
 
         # Query Firestore for recent reports of the same type
         collection_path = 'reports'
@@ -86,7 +93,7 @@ class AddReportSerializer(serializers.ModelSerializer):
                 
                 if user.id in [int(id) for id in user_ids]:
                     raise serializers.ValidationError({
-                        "detail": "You've already reported this incident.",
+                        "detail": "You've already reported or verified this incident.",
                         "existing_report": duplicate_report
                     })
                 else:
@@ -142,62 +149,65 @@ class AddReportSerializer(serializers.ModelSerializer):
                             "existing_report": duplicate_report
                         })
             print("isEmeregency1: ", validated_data['is_emergency'])           
-            if validated_data['is_emergency'] == 'emergency':
-                print("isEmergency: ", validated_data['is_emergency'])  # Debugging
-                
-                # Extract data from validated_data
-                report_lat = validated_data['latitude']
-                report_lon = validated_data['longitude']
-                report_type = validated_data['type_of_report']
-                print(f"Report details - Latitude: {report_lat}, Longitude: {report_lon}, Type: {report_type}")  # Debugging
+            
+           
+            report_lat = validated_data['latitude']
+            report_lon = validated_data['longitude']
+            report_type = validated_data['type_of_report']
+            print(f"Report details - Latitude: {report_lat}, Longitude: {report_lon}, Type: {report_type}")  # Debugging
 
                 # Map report type to department ID
-                report_type_to_department_id = {
-                    "Fires": 1,
-                    "Floods": 6,
-                    "Road Accident": 6,
-                }
-                target_department_id = report_type_to_department_id.get(report_type)
-                print(f"Target Department ID: {target_department_id}")  # Debugging
+            report_type_to_department_id = {
+                    "Fire": 1,
+                    "Flood": 6,
+                    "Road Accident": 7,
+                    "Street Light": 4,
+                    "Fallen Trees": 7,
+                    "Potholes": 5,     
+                    "Others": 8       
+            }
+            target_department_id = report_type_to_department_id.get(report_type)
+            print(f"Target Department ID: {target_department_id}")  # Debugging
 
-                if not target_department_id:
-                    raise serializers.ValidationError({"detail": f"Unknown report type: {report_type}"})
+            if not target_department_id:
+                raise serializers.ValidationError({"detail": f"Unknown report type: {report_type}"})
 
                 # Filter for department admins
-                department_admins = User.objects.filter(
+            department_admins = User.objects.filter(
                     role='department_admin',
                     department_id=target_department_id
-                )
-                print(f"Found {department_admins.count()} department admins for type '{report_type}'.")  # Debugging
+            )
+            print(f"Found {department_admins.count()} department admins for type '{report_type}'.")  # Debugging
 
-                nearest_admin = None
-                min_distance = float('inf')
+            nearest_admin = None
+            min_distance = float('inf')
 
-                for admin in department_admins:
-                    print(f"Checking admin: {admin.username}, Station Address: {admin.station_address}")  # Debugging
-                    if admin.station_address:  # Ensure the admin has station coordinates
-                        try:
-                            station_lat, station_lon = map(float, admin.station_address.split(','))
-                            print(f"Admin Station - Latitude: {station_lat}, Longitude: {station_lon}")  # Debugging
-                            distance = self.calculate_distance(report_lat, report_lon, station_lat, station_lon)
-                            print(f"Distance to admin {admin.username}: {distance}")  # Debugging
+            for admin in department_admins:
+                print(f"Checking admin: {admin.username}, Station Address: {admin.station_address}")  # Debugging
+                if admin.station_address:  # Ensure the admin has station coordinates
+                    try:
+                        station_lat, station_lon = map(float, admin.station_address.split(','))
+                        print(f"Admin Station - Latitude: {station_lat}, Longitude: {station_lon}")  # Debugging
+                        distance = self.calculate_distance(report_lat, report_lon, station_lat, station_lon)
+                        print(f"Distance to admin {admin.username}: {distance}")  # Debugging
 
-                            if distance < min_distance:
-                                min_distance = distance
-                                nearest_admin = admin
-                                print(f"Nearest admin updated to: {admin.username} with distance: {min_distance}")  # Debugging
-                        except ValueError as e:
-                            print(f"Error parsing station address for admin {admin.username}: {e}")  # Debugging
+                        if distance < min_distance:
+                            min_distance = distance
+                            nearest_admin = admin
+                            print(f"Nearest admin updated to: {admin.username} with distance: {min_distance}")  # Debugging
+                    except ValueError as e:
+                        print(f"Error parsing station address for admin {admin.username}: {e}")  # Debugging
 
-                if nearest_admin:
-                    print(f"Nearest admin selected: {nearest_admin.username}, Department ID: {nearest_admin.department_id}")  # Debugging
-                    validated_data['assigned_to_id'] = nearest_admin.id
-                    validated_data['status'] = "Ongoing"
-                else:
-                    print("No suitable admin found.")
+            if nearest_admin:
+                 print(f"Nearest admin selected: {nearest_admin.username}, Department ID: {nearest_admin.department_id}")  # Debugging
+                 validated_data['assigned_to_id'] = nearest_admin.id
+                 validated_data['status'] = "Ongoing"
             else:
+                print("No suitable admin found.") 
+                validated_data['assigned_to_id'] = None
                 validated_data['status'] = "Pending"
-
+                
+               
 
                                     
             report_uuid = uuid.uuid4()
@@ -218,16 +228,16 @@ class AddReportSerializer(serializers.ModelSerializer):
 
                 # Get a reference to the Firebase storage bucket
                 bucket = storage.bucket()
+                try:
+                    image_blob = bucket.blob(f'images_report/{image_name}.{ext}')
+                    image_blob.upload_from_filename(temp_image_path, content_type=f'image/{ext}')
 
-                # Create a blob using the report UUID as the image name and upload the file to Firebase
-                image_blob = bucket.blob(f'images_report/{image_name}.{ext}')
-                image_blob.upload_from_filename(temp_image_path, content_type=f'image/{ext}')
+                    image_blob.make_public()
 
-                # Make the image publicly accessible
-                image_blob.make_public()
+                    image_path_string = image_blob.public_url
+                finally:
+                    default_storage.delete(temp_image_path)
 
-                # Add the public image URL to report data
-                image_path_string = image_blob.public_url
 
             report_data = {
                 'report_id': str(report_uuid),

@@ -116,13 +116,13 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'backend',
         'USER': 'postgres',
-        'PASSWORD': '1804',
+        'PASSWORD': '1234',
         'HOST': 'localhost',
         'PORT': '5432'
     }
 }
 
-DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_user:fjhpNQohlSlkANEP9LgpRnBDjAIulvhI@dpg-ct1cm768ii6s73feka0g-a.singapore-postgres.render.com/crisp_postgresql_db')
+# DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_user:fjhpNQohlSlkANEP9LgpRnBDjAIulvhI@dpg-ct1cm768ii6s73feka0g-a.singapore-postgres.render.com/crisp_postgresql_db')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -148,7 +148,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Manila'
+USE_TZ = True
 
 USE_I18N = True
 
@@ -180,6 +181,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.1.17:8081",
     'http://192.168.100.15:8081',
     'http://192.168.254.179:8081',
+    "http://localhost:8000",
+    "http://localhost:8081",
 ]
 CORS_ORIGIN_WHITELIST = [
     'http://192.168.1.191:8081',
