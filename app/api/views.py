@@ -83,6 +83,72 @@ from django.contrib.auth.tokens import default_token_generator
 logger = logging.getLogger(__name__)
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework import status
+
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+import numpy as np
+from PIL import Image
+import io
+import os
+
+# Load the trained model
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current file
+MODEL_PATH = os.path.join(BASE_DIR, "fixed_model.h5")  # Construct full path to model
+
+model = load_model(MODEL_PATH)
+
+# Define class labels
+CLASS_NAMES = ["Fallen Tree", "Fire", "Flood", "class_4", "class_5", "class_6", "class_7", "class_8", "class_9"]
+
+def preprocess_image(image):
+    """
+    Preprocess the input image to match the model's expected format.
+    """
+    image = image.resize((224, 224))  # Resize to match model input shape
+    image = np.array(image) / 255.0   # Normalize pixel values (0-1)
+    image = np.expand_dims(image, axis=0)  # Add batch dimension
+    return image
+
+def predict_image(image):
+    """
+    Run prediction on the image and return the class label & confidence score.
+    """
+    processed_image = preprocess_image(image)
+    predictions = model.predict(processed_image)[0]  # Get predictions
+    class_index = np.argmax(predictions)  # Get the highest confidence index
+    confidence = predictions[class_index]  # Confidence score
+
+    return {"class": CLASS_NAMES[class_index], "confidence": float(confidence)}
+
+class ImageClassificationAPIView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = []
+    authentication_classes= []
+    def post(self, request, *args, **kwargs):
+        if 'image' not in request.FILES:
+            return Response({"error": "No image file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Read and process the image
+            image_file = request.FILES['image']
+            image = Image.open(io.BytesIO(image_file.read()))
+
+            # Ensure image is RGB format (handle grayscale or other formats)
+            image = image.convert("RGB")
+
+            # Make a prediction
+            result = predict_image(image)
+            
+            return Response(result, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    
 class FirePredictionView(generics.CreateAPIView):
     serializer_class = FirePredictionSerializer
 
