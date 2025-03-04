@@ -94,7 +94,7 @@ import numpy as np
 from PIL import Image
 import io
 import os
-
+    
 # Load the trained model
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current file
 MODEL_PATH = os.path.join(BASE_DIR, "fixed_model.h5")  # Construct full path to model
