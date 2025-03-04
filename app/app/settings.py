@@ -109,14 +109,14 @@ WSGI_APPLICATION = 'app.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-import dj_database_url
+# import dj_database_url
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'backend',
         'USER': 'postgres',
-        'PASSWORD': '0713',
+        'PASSWORD': '071302',
         'HOST': 'localhost',
         'PORT': '5432'
     }
@@ -186,8 +186,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://172.20.10.7:8081",
     "http://192.168.1.17:8081",
     'http://192.168.100.15:8081',
-    'http://192.168.100.15:8000',
-    'http://192.168.100.20:8081',
+    'http://192.168.100.28:8000',
+    'http://192.168.100.28:8081',
     'http://192.168.254.179:8081',
     "http://localhost:8000",
     "http://localhost:8081",
