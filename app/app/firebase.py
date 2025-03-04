@@ -5,7 +5,7 @@ import os
 # Initialize Firebase
 # cred = credentials.Certificate('C:/Users/ADMIN/Documents/crisp-5d09f-firebase-adminsdk-vl4cg-30e5cb1ca3.json')
 # cred = credentials.Certificate('C:/Users/Siyan/Desktop/Projects/Thesis-BSCS/crisp-63736-firebase-adminsdk-r1i8j-a043e2e3ad.json')
-cred = credentials.Certificate('C:/Users/DESKTOP/Downloads/crisp-63736-firebase-adminsdk-r1i8j-a043e2e3ad.json')
+cred = credentials.Certificate('C:/Users/cmate/Downloads/crisp-63736-firebase-adminsdk-r1i8j-a043e2e3ad.json')
 # cred_data = json.loads(os.environ.get("FIREBASE_CRED"))
 # cred = credentials.Certificate(cred_data)
 
