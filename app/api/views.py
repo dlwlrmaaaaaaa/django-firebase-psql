@@ -52,7 +52,7 @@ import pandas as pd
 import os
 import gdown
 import uuid
-from app.firebase import db
+from app.app.firebase import db
 from firebase_admin import firestore
 from django.http import JsonResponse
 from .models import User, Department
