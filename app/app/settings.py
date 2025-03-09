@@ -86,7 +86,8 @@ MIDDLEWARE = [
         'corsheaders.middleware.CorsMiddleware'
     ]
 
-ROOT_URLCONF = 'app.urls'
+ROOT_URLCONF = "app.app.urls"
+
 
 TEMPLATES = [
         {
@@ -171,9 +172,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-CORS_ALLOW_ALL_ORIGINS = True
-    # CORS_ORIGIN_WHITELIST = ['*']
-
+CORS_ALLOWED_ORIGINS = ['*']
+CORS_ORIGIN_WHITELIST = ['*']
+    
 AUTHENTICATION_BACKENDS = [
         'api.authentication.login_authentication.UsernameOrEmail', 
         'django.contrib.auth.backends.ModelBackend', 
