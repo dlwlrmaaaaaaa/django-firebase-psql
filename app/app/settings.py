@@ -86,7 +86,7 @@ MIDDLEWARE = [
         'corsheaders.middleware.CorsMiddleware'
     ]
 
-ROOT_URLCONF = "app.urls"
+ROOT_URLCONF = "app.app.urls"
 
 
 TEMPLATES = [
