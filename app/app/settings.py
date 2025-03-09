@@ -49,7 +49,7 @@ INSTALLED_APPS = [
         'django.contrib.messages',
         'django.contrib.staticfiles',
         'corsheaders',
-        'api',
+        'app.api',
         'rest_framework',
     ]
 
@@ -172,7 +172,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 CORS_ALLOW_ALL_ORIGINS = True
-# CORS_ORIGIN_WHITELIST = ['*']
+    # CORS_ORIGIN_WHITELIST = ['*']
 
 AUTHENTICATION_BACKENDS = [
         'api.authentication.login_authentication.UsernameOrEmail', 
