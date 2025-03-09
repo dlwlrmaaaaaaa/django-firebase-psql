@@ -102,7 +102,7 @@ MODEL_PATH = os.path.join(BASE_DIR, "fixed_model.h5")  # Construct full path to 
 model = load_model(MODEL_PATH)
 
 # Define class labels
-CLASS_NAMES = ["Fallen Tree", "Fire", "Flood", "Graphic Violence", "Nudity", "Others", "Pothole", "Road Accident", "Street Light"]
+CLASS_NAMES = ["Fallen Tree", "Fire Accident", "Flood", "Graphic Violence", "Nudity", "Others", "Pothole", "Road Accident", "Street Light"]
 
 def preprocess_image(image):
     """
@@ -476,7 +476,7 @@ class VerifyEmailView(APIView):
             return Response({"error": "Invalid request."}, status=400)
 
 class DepartmentListView(generics.ListAPIView):
-    permission_classes = [IsSuperAdmin]
+    permission_classes = [AllowAny]
     queryset = Department.objects.all()
     serializer_class = DepartmentList
 
