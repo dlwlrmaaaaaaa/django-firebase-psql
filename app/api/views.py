@@ -97,30 +97,54 @@ import os
     
 # Load the trained model
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current file
-MODEL_PATH = os.path.join(BASE_DIR, "fixed_model.h5")  # Construct full path to model
+MODEL_PATH = os.path.join(BASE_DIR, "fine_tuning_97.h5")  # Construct full path to model
 
 model = load_model(MODEL_PATH)
 
 # Define class labels
-CLASS_NAMES = ["Fallen Tree", "Fire Accident", "Flood", "Graphic Violence", "Nudity", "Others", "Pothole", "Road Accident", "Street Light"]
+CLASS_NAMES = [ "Flood", "Pothole", "Nudity", "Road Accident", "Fire Accident", "Street Light", "Others"]
 
 def preprocess_image(image):
-    """
-    Preprocess the input image to match the model's expected format.
-    """
-    image = image.resize((224, 224))  # Resize to match model input shape
+    if image.size != (224, 224):
+       image = image.resize((224, 224))
     image = np.array(image) / 255.0   # Normalize pixel values (0-1)
     image = np.expand_dims(image, axis=0)  # Add batch dimension
     return image
 
+# def predict_image(image):
+#     """
+#     Run prediction on the image and return the class label & confidence score.
+#     """
+#     processed_image = preprocess_image(image)
+#     predictions = model.predict(processed_image)[0]  # Get predictions
+#     class_index = np.argmax(predictions)  # Get the highest confidence index
+#     confidence = predictions[class_index]  # Confidence score
+#     print({"class": CLASS_NAMES[class_index], "confidence": float(confidence), "predictions": predictions})
+#     return {"class": CLASS_NAMES[class_index], "confidence": float(confidence)}
+
 def predict_image(image):
     """
     Run prediction on the image and return the class label & confidence score.
+    If the highest prediction's confidence is below 0.70, return the second-highest.
     """
     processed_image = preprocess_image(image)
-    predictions = model.predict(processed_image)[0]  # Get predictions
-    class_index = np.argmax(predictions)  # Get the highest confidence index
-    confidence = predictions[class_index]  # Confidence score
+    predictions = model.predict(processed_image)[0]  # Array of probabilities for each class
+    
+    # Get the indices sorted by prediction confidence (highest first)
+    sorted_indices = np.argsort(predictions)[::-1]
+    
+    top_index = sorted_indices[0]
+    top_confidence = predictions[top_index]
+    print("Top index: ", top_index)
+    print("Top confidence: ", top_confidence)
+    # Check if the top confidence is below threshold and if a second prediction exists
+    if top_confidence < 0.70 and len(sorted_indices) > 1:
+        class_index = sorted_indices[1]
+        confidence = predictions[class_index]
+        print("Second top: ", confidence)
+    else:
+        class_index = top_index
+        confidence = top_confidence
 
     return {"class": CLASS_NAMES[class_index], "confidence": float(confidence)}
 
