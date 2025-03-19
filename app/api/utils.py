@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 from django.conf import settings
 from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent  # Adjust based on folder structure
-FIREBASE_KEY_PATH = BASE_DIR / "app" / "config" / "crisp-63736-firebase-adminsdk-r1i8j-a043e2e3ad.json"
+FIREBASE_KEY_PATH = BASE_DIR / "app" / "config" / "crisp-63736-firebase-adminsdk-r1i8j-7cca171a94.json"
 
 
 def generate_firebase_token(user):
@@ -76,29 +76,37 @@ def send_push_notification(expo_push_token, title, message, data=None):
 
 def send_push_notification_to_all(title, message):
     """
-    Sends a push notification to all users with stored Expo push tokens.
+    Sends a push notification to all users with stored FCM tokens.
     """
     users = ExpoPushToken.objects.exclude(expo_push_token__isnull=True).exclude(expo_push_token="")
+    access_token = get_access_token()
 
     if not users.exists():
         return JsonResponse({"error": "No registered push tokens found"}, status=400)
 
-    notifications = []
-    for user in users:
-        notifications.append({
-            "to": user.expo_push_token,
-            "title": title,
-            "body": message,
-            "sound": "default"
-        })
-
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {access_token}"
     }
 
-    response = requests.post(EXPO_PUSH_URL, data=json.dumps(notifications), headers=headers)
+    responses = []
     
-    if response.status_code == 200:
-        return JsonResponse({"success": "Notification sent to all users!"}, status=200)
-    else:
-        return JsonResponse({"error": "Notification failed"}, status=response.status_code)
+    for user in users:
+        payload = {
+            "message": {
+                "token": user.expo_push_token,
+                "notification": {
+                    "title": title,
+                    "body": message
+                }
+            }
+        }
+
+        try:
+            response = requests.post(FCM_ENDPOINT, json=payload, headers=headers)
+            response_data = response.json()
+            responses.append({"token": user.expo_push_token, "status": response.status_code, "response": response_data})
+        except Exception as e:
+            responses.append({"token": user.expo_push_token, "error": str(e)})
+
+    return JsonResponse({"responses": responses}, status=200)

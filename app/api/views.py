@@ -104,14 +104,20 @@ class SendToAllNotifications(APIView):
         title = request.data.get("title")
         message = request.data.get("message")
 
-        if not title or not message:
-            return Response({"error": "user_id, title, and message are required"}, status=status.HTTP_400_BAD_REQUEST)
+        print("Title: ", title)
+        print("Message: ", message)
 
-        success = send_push_notification_to_all(title, message)
-        if success:
+        if not title or not message:
+            return Response({"error": "title and message are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        response = send_push_notification_to_all(title, message)
+
+        # Extract status code from JsonResponse
+        if response.status_code == 200:
             return Response({"message": "Notification sent successfully"}, status=status.HTTP_200_OK)
         else:
-            return Response({"error": "Failed to send notification"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": "Failed to send notification"}, status=response.status_code)
+
 class SendPushNotification(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
