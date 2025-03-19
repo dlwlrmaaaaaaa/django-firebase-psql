@@ -10,6 +10,11 @@ from django.http import JsonResponse
 logger = logging.getLogger(__name__)
 
 from django.conf import settings
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent  # Adjust based on folder structure
+FIREBASE_KEY_PATH = BASE_DIR / "app" / "config" / "crisp-63736-firebase-adminsdk-r1i8j-a043e2e3ad.json"
+
+
 def generate_firebase_token(user):
     additional_claims = {
         "role": user.role,  
@@ -21,9 +26,9 @@ def get_account_type(user):
 FCM_ENDPOINT = "https://fcm.googleapis.com/v1/projects/crisp-63736/messages:send"
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
-SERVICE_ACCOUNT_PATH = "C:/Users/cmate/Downloads/crisp-63736-firebase-adminsdk-r1i8j-a043e2e3ad.json"
+
 creds = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_PATH,
+    str(FIREBASE_KEY_PATH),
     scopes=["https://www.googleapis.com/auth/firebase.messaging"]
 )
 def get_access_token():
@@ -66,3 +71,32 @@ def send_push_notification(expo_push_token, title, message, data=None):
     except Exception as e:
         logger.error(f"Error sending push notification: {str(e)}")
         return False
+
+def send_push_notification_to_all(title, message):
+    """
+    Sends a push notification to all users with stored Expo push tokens.
+    """
+    users = CustomUser.objects.exclude(expo_push_token__isnull=True).exclude(expo_push_token="")
+
+    if not users.exists():
+        return JsonResponse({"error": "No registered push tokens found"}, status=400)
+
+    notifications = []
+    for user in users:
+        notifications.append({
+            "to": user.expo_push_token,
+            "title": title,
+            "body": message,
+            "sound": "default"
+        })
+
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(EXPO_PUSH_URL, data=json.dumps(notifications), headers=headers)
+    
+    if response.status_code == 200:
+        return JsonResponse({"success": "Notification sent to all users!"}, status=200)
+    else:
+        return JsonResponse({"error": "Notification failed"}, status=response.status_code)

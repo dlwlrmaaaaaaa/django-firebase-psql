@@ -62,7 +62,7 @@ class UserSession(models.Model):
 class ExpoPushToken(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     expo_push_token = models.CharField(max_length=255, unique=True)
-
+0
     def __str__(self):
         return f"{self.user.username} - {self.expo_push_token}"   
 class Report(models.Model):
