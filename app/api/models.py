@@ -11,7 +11,7 @@ class Department(models.Model):
 
     def __str__(self):
         return self.name
-    
+
     
 class User(AbstractUser):
     ROLE_CHOICES = [
@@ -59,7 +59,11 @@ class UserSession(models.Model):
 
     def __str__(self):
         return f"Session for {self.user.username} on device {self.device_id}"
-
+class ExpoPushToken(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    expo_push_token = models.CharField(max_length=255, unique=True)
+    def __str__(self):
+        return f"{self.user.username} - {self.expo_push_token}"   
 class Report(models.Model):
     CATEGORY_CHOICES = [
         ('emergency', 'Emergency'),

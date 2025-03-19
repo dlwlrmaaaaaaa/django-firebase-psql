@@ -10,9 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-
-from corsheaders.defaults import default_headers
-
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -31,6 +28,8 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 # EMAIL VERIFICATION
+TF_CPP_MIN_LOG_LEVEL=2
+TF_ENABLE_ONEDNN_OPTS=0
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -79,7 +78,6 @@ AUTH_USER_MODEL = 'api.User'
 
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -87,6 +85,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware'
 ]
 
 ROOT_URLCONF = 'app.urls'
@@ -119,7 +118,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'backend',
         'USER': 'postgres',
-        'PASSWORD': '1804',
+        'PASSWORD': '071302',
         'HOST': 'localhost',
         'PORT': '5432'
     }
@@ -176,33 +175,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-
-CORS_ALLOWED_ORIGINS = [
-    'http://192.168.1.191:8081',
-    'http://192.168.1.191:8000',
-    "http://192.168.1.13:8081",
-    "http://192.168.1.88:8081",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://192.168.1.25:8081",
-    "http://192.168.1.25:8000",
-    "http://192.168.105.172:8081",
-    "http://172.20.10.7:8081",
-    "http://192.168.1.17:8081",
-    'http://192.168.100.15:8081',
-    'http://192.168.100.28:8000',
-    'http://192.168.100.28:8081',
-    'http://192.168.254.179:8081',
-    "http://localhost:8000",
-    "http://localhost:8081",
-]
-# CORS_ORIGIN_WHITELIST = True
-
 CORS_ALLOW_ALL_ORIGINS = True
-
-CORS_ALLOW_HEADERS = list(default_headers) + [
-    'ngrok-skip-browser-warning',
-]
 
 AUTHENTICATION_BACKENDS = [
     'api.authentication.login_authentication.UsernameOrEmail', 
