@@ -43,7 +43,8 @@ from .views import (
     DepartmentHeadViewSet,
     WorkersViewSet,
     UsersViewSet,
-    SendPushNotification
+    SendPushNotification,
+    SendToAllNotifications
     # SuperAdminViewSet
 )
 from . import views
@@ -61,6 +62,7 @@ router.register(r"users", UsersViewSet, basename="user")  # Unique basename
 
 
 urlpatterns = [
+    path("send-notification-to-all/", SendToAllNotifications.as_view(), name="send-notifications-to-all"),
     path("send-notification/", SendPushNotification.as_view(), name="send-notification"),
     path('save-expo-token/', ExpoPushTokenAdd.as_view(), name='save_expo_token'),
     path('image/', ImageClassificationAPIView.as_view(), name="predict"),

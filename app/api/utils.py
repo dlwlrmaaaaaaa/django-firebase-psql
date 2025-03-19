@@ -6,7 +6,9 @@ import logging
 import google.auth.transport.requests
 from google.oauth2 import service_account
 from django.http import JsonResponse
-
+from django.contrib.auth import get_user_model
+User = get_user_model()
+from api.models import ExpoPushToken
 logger = logging.getLogger(__name__)
 
 from django.conf import settings
@@ -76,7 +78,7 @@ def send_push_notification_to_all(title, message):
     """
     Sends a push notification to all users with stored Expo push tokens.
     """
-    users = CustomUser.objects.exclude(expo_push_token__isnull=True).exclude(expo_push_token="")
+    users = ExpoPushToken.objects.exclude(expo_push_token__isnull=True).exclude(expo_push_token="")
 
     if not users.exists():
         return JsonResponse({"error": "No registered push tokens found"}, status=400)

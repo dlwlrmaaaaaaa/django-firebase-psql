@@ -78,7 +78,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
-from .utils import send_push_notification
+from .utils import send_push_notification, send_push_notification_to_all
 import json
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -96,6 +96,22 @@ from PIL import Image
 import io
 import os
     
+
+class SendToAllNotifications(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    def post(self, request):
+        title = request.data.get("title")
+        message = request.data.get("message")
+
+        if not title or not message:
+            return Response({"error": "user_id, title, and message are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        success = send_push_notification_to_all(title, message)
+        if success:
+            return Response({"message": "Notification sent successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Failed to send notification"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class SendPushNotification(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
