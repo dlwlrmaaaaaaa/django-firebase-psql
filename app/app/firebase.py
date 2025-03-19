@@ -20,3 +20,4 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 bucket = storage.bucket()
+

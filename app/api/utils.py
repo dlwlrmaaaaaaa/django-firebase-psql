@@ -1,6 +1,15 @@
 from django.contrib.auth import get_user_model
 from firebase_admin import auth
+import requests
+import json
+import logging
+import google.auth.transport.requests
+from google.oauth2 import service_account
+from django.http import JsonResponse
 
+logger = logging.getLogger(__name__)
+
+from django.conf import settings
 def generate_firebase_token(user):
     additional_claims = {
         "role": user.role,  
@@ -9,4 +18,51 @@ def generate_firebase_token(user):
 
 def get_account_type(user):
     return user.role  # Ensure this is accessed from the correct user mode
+FCM_ENDPOINT = "https://fcm.googleapis.com/v1/projects/crisp-63736/messages:send"
 
+EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+SERVICE_ACCOUNT_PATH = "C:/Users/cmate/Downloads/crisp-63736-firebase-adminsdk-r1i8j-a043e2e3ad.json"
+creds = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_PATH,
+    scopes=["https://www.googleapis.com/auth/firebase.messaging"]
+)
+def get_access_token():
+    """Refresh and return a valid OAuth 2.0 access token."""
+    request = google.auth.transport.requests.Request()
+    creds.refresh(request)  # Refresh token
+    return creds.token
+def send_push_notification(expo_push_token, title, message, data=None):
+    """
+    Sends a push notification using Expo's push notification service.
+    """
+    access_token = get_access_token()
+    payload = {
+        "message": {
+            "token": expo_push_token,  # Correct field name for single device
+            "notification": {
+                "title": title,
+                "body": message
+            },
+            "data": data or {}  # Optional custom data
+        }
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept-encoding": "gzip, deflate",
+        "Accept": "application/json",
+        "Authorization": f"Bearer {access_token}"
+    }
+
+    try:
+        response = requests.post(FCM_ENDPOINT, data=json.dumps(payload), headers=headers)
+        response_data = response.json()
+        # print("FCM Response:", response.status_code, response.json())
+
+        if response.status_code == 200:
+            return JsonResponse({"success": "Notification sent successfully!"}, status=200)
+        else:
+            return JsonResponse({"error":  "Notification failed"}, status=response.status_code)
+    except Exception as e:
+        logger.error(f"Error sending push notification: {str(e)}")
+        return False

@@ -29,11 +29,12 @@ from .serializers.user_serializers import (
     GetWorkersSerializer,
     ForgotPasswordSerializer,
     VerifyOtpSerializer,
-    ResetPasswordSerializer
+    ResetPasswordSerializer,
+    ExpoPushTokenSerializer
 )
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .serializers.fire_serializer import FirePredictionSerializer
-from .models import Report
+from .models import Report, ExpoPushToken  
 from .models import VerifyAccount
 from .serializers.verifyAcc_serializer import VerifyAccountSerializer, VerifyUser
 from .serializers.otp_serializer import OTPVerificationSerializer
@@ -77,8 +78,8 @@ from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
-
-
+from .utils import send_push_notification
+import json
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,66 @@ from PIL import Image
 import io
 import os
     
+class SendPushNotification(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    def post(self, request):
+        user_id = request.data.get("user_id")
+        title = request.data.get("title")
+        message = request.data.get("message")
+
+        if not user_id or not title or not message:
+            return Response({"error": "user_id, title, and message are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = get_user_model().objects.filter(id=user_id).first()
+        if not user:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        expo_token_obj = ExpoPushToken.objects.filter(user=user).first()
+        if not expo_token_obj:
+            return Response({"error": "Expo push token not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        success = send_push_notification(expo_token_obj.expo_push_token, title, message)
+        if success:
+            return Response({"message": "Notification sent successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Failed to send notification"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class ExpoPushTokenAdd(APIView):
+    permission_classes = []
+    authentication_classes = []
+    def post(self, request):
+        try:
+            logger.info(f"Incoming data: {json.dumps(request.data)}")  # Log request data
+
+            user_id = request.data.get("user_id")
+            expo_push_token = request.data.get("expo_push_token")
+
+            if not user_id:
+                return Response({"error": "User ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+            if not expo_push_token:
+                return Response({"error": "Expo push token is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Ensure user exists using get_user_model()
+            user = get_user_model().objects.filter(id=user_id).first()
+            if not user:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Save or update token
+            token, created = ExpoPushToken.objects.update_or_create(
+                user=user,
+                defaults={"expo_push_token": expo_push_token},
+            )
+
+            return Response(
+                {"message": "Token saved successfully"},
+                status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            logger.error(f"Unexpected error: {str(e)}")
+            return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 # Load the trained model
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current file
 MODEL_PATH = os.path.join(BASE_DIR, "fine_tuning_97.h5")  # Construct full path to model
@@ -137,7 +198,6 @@ def predict_image(image):
     top_confidence = predictions[top_index]
     print("Top index: ", top_index)
     print("Top confidence: ", top_confidence)
-    # Check if the top confidence is below threshold and if a second prediction exists
     if top_confidence < 0.70 and len(sorted_indices) > 1:
         class_index = sorted_indices[1]
         confidence = predictions[class_index]
