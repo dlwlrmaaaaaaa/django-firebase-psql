@@ -30,7 +30,8 @@ from .views import (
     VerifyOTPView,
     ForgotPasswordView,
     ResetPasswordView,
-    ExportAllReports
+    ExportAllReports,
+    ImageClassificationAPIView
 )
 from rest_framework.routers import DefaultRouter
 
@@ -58,6 +59,7 @@ router.register(r"users", UsersViewSet, basename="user")  # Unique basename
 
 
 urlpatterns = [
+    path('image/', ImageClassificationAPIView.as_view(), name="predict"),
     path(
         "token/", MyTokenObtainPairView.as_view(), name="token_obtain_pair"
     ),  ## This is login and generated token

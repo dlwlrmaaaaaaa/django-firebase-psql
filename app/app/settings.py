@@ -10,6 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+
+from corsheaders.defaults import default_headers
+
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -76,6 +79,7 @@ AUTH_USER_MODEL = 'api.User'
 
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -83,7 +87,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware'
 ]
 
 ROOT_URLCONF = 'app.urls'
@@ -109,7 +112,7 @@ WSGI_APPLICATION = 'app.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-import dj_database_url
+# import dj_database_url
 
 DATABASES = {
     'default': {
@@ -178,6 +181,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://192.168.1.191:8081',
     'http://192.168.1.191:8000',
     "http://192.168.1.13:8081",
+    "http://192.168.1.88:8081",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://192.168.1.25:8081",
@@ -186,16 +190,18 @@ CORS_ALLOWED_ORIGINS = [
     "http://172.20.10.7:8081",
     "http://192.168.1.17:8081",
     'http://192.168.100.15:8081',
-    'http://192.168.100.15:8000',
-    'http://192.168.100.20:8081',
+    'http://192.168.100.28:8000',
+    'http://192.168.100.28:8081',
     'http://192.168.254.179:8081',
     "http://localhost:8000",
     "http://localhost:8081",
 ]
-CORS_ORIGIN_WHITELIST = [
-    'http://192.168.1.191:8081',
-    "http://192.168.1.13:8081",
-    "http://192.168.1.25:8081",
+# CORS_ORIGIN_WHITELIST = True
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'ngrok-skip-browser-warning',
 ]
 
 AUTHENTICATION_BACKENDS = [
