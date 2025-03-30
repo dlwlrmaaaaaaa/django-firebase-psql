@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,6 +29,8 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 # EMAIL VERIFICATION
+TF_CPP_MIN_LOG_LEVEL=2
+TF_ENABLE_ONEDNN_OPTS=0
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -64,7 +67,7 @@ REST_FRAMEWORK = {
 
 from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=20),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=90), 
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -116,7 +119,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'backend',
         'USER': 'postgres',
-        'PASSWORD': '071302',
+        'PASSWORD': '1804',
         'HOST': 'localhost',
         'PORT': '5432'
     }
@@ -173,29 +176,9 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-
-CORS_ALLOWED_ORIGINS = [
-    'http://192.168.1.191:8081',
-    'http://192.168.1.191:8000',
-    "http://192.168.1.13:8081",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://192.168.1.25:8081",
-    "http://192.168.1.25:8000",
-    "http://192.168.105.172:8081",
-    "http://172.20.10.7:8081",
-    "http://192.168.1.17:8081",
-    'http://192.168.100.15:8081',
-    'http://192.168.100.15:8000',
-    'http://192.168.100.20:8081',
-    'http://192.168.254.179:8081',
-    "http://localhost:8000",
-    "http://localhost:8081",
-]
-CORS_ORIGIN_WHITELIST = [
-    'http://192.168.1.191:8081',
-    "http://192.168.1.13:8081",
-    "http://192.168.1.25:8081",
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'ngrok-skip-browser-warning',
 ]
 
 AUTHENTICATION_BACKENDS = [

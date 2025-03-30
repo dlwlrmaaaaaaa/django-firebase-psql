@@ -16,7 +16,7 @@ import ipaddress
 from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from ..models import Department, UserSession
+from ..models import Department, UserSession, ExpoPushToken
 from app.firebase import db
 import logging
 from django.core.mail import send_mail
@@ -24,6 +24,12 @@ import random
 from django.core.validators import RegexValidator
 from django.core.validators import validate_email
 User = get_user_model()
+
+
+class ExpoPushTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExpoPushToken
+        fields = '__all__'
 
 
 class CitizenSerializer(serializers.ModelSerializer):
@@ -541,7 +547,7 @@ class UsersSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         # fields = ['full_name', 'contact_number', 'is_email_verified', 'role', 'is_active', 'is_verified']
-        fields = ['username', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'address', 'email', 'id', 'date_joined', 'score', 'supervisor_id']
+        fields = ['username', 'contact_number', 'is_verified', 'violation', 'role', 'account_status', 'station', 'address', 'email', 'id', 'date_joined', 'score', 'supervisor_id']
 
     # def get_full_name(self, obj):
     #     return f"{obj.first_name} {obj.last_name}"

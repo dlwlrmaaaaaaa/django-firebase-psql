@@ -29,11 +29,12 @@ from .serializers.user_serializers import (
     GetWorkersSerializer,
     ForgotPasswordSerializer,
     VerifyOtpSerializer,
-    ResetPasswordSerializer
+    ResetPasswordSerializer,
+    ExpoPushTokenSerializer
 )
 from .serializers.report_serializers import AddReportSerializer, UpdateReportSerializer
 from .serializers.fire_serializer import FirePredictionSerializer
-from .models import Report
+from .models import Report, ExpoPushToken  
 from .models import VerifyAccount
 from .serializers.verifyAcc_serializer import VerifyAccountSerializer, VerifyUser
 from .serializers.otp_serializer import OTPVerificationSerializer
@@ -77,8 +78,8 @@ from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
-
-
+from .utils import send_push_notification, send_push_notification_to_all
+import json
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -94,35 +95,140 @@ import numpy as np
 from PIL import Image
 import io
 import os
+    
+
+class SendToAllNotifications(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    def post(self, request):
+        title = request.data.get("title")
+        message = request.data.get("message")
+
+        print("Title: ", title)
+        print("Message: ", message)
+
+        if not title or not message:
+            return Response({"error": "title and message are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        response = send_push_notification_to_all(title, message)
+
+        # Extract status code from JsonResponse
+        if response.status_code == 200:
+            return Response({"message": "Notification sent successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Failed to send notification"}, status=response.status_code)
+
+class SendPushNotification(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    def post(self, request):
+        user_id = request.data.get("user_id")
+        title = request.data.get("title")
+        message = request.data.get("message")
+
+        if not user_id or not title or not message:
+            return Response({"error": "user_id, title, and message are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = get_user_model().objects.filter(id=user_id).first()
+        if not user:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        expo_token_obj = ExpoPushToken.objects.filter(user=user).first()
+        if not expo_token_obj:
+            return Response({"error": "Expo push token not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        success = send_push_notification(expo_token_obj.expo_push_token, title, message)
+        if success:
+            return Response({"message": "Notification sent successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Failed to send notification"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class ExpoPushTokenAdd(APIView):
+    permission_classes = []
+    authentication_classes = []
+    def post(self, request):
+        try:
+            logger.info(f"Incoming data: {json.dumps(request.data)}")  # Log request data
+
+            user_id = request.data.get("user_id")
+            expo_push_token = request.data.get("expo_push_token")
+
+            if not user_id:
+                return Response({"error": "User ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+            if not expo_push_token:
+                return Response({"error": "Expo push token is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Ensure user exists using get_user_model()
+            user = get_user_model().objects.filter(id=user_id).first()
+            if not user:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Save or update token
+            token, created = ExpoPushToken.objects.update_or_create(
+                user=user,
+                defaults={"expo_push_token": expo_push_token},
+            )
+
+            return Response(
+                {"message": "Token saved successfully"},
+                status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            logger.error(f"Unexpected error: {str(e)}")
+            return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # Load the trained model
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current file
-MODEL_PATH = os.path.join(BASE_DIR, "fixed_model.h5")  # Construct full path to model
+MODEL_PATH = os.path.join(BASE_DIR, "fine_tuning_97.h5")  # Construct full path to model
 
 model = load_model(MODEL_PATH)
 
 # Define class labels
-CLASS_NAMES = ["Fallen Tree", "Fire", "Flood", "class_4", "class_5", "class_6", "class_7", "class_8", "class_9"]
+CLASS_NAMES = [ "Flood", "Pothole", "Nudity", "Road Accident", "Fire Accident", "Street Light", "Others"]
 
 def preprocess_image(image):
-    """
-    Preprocess the input image to match the model's expected format.
-    """
-    image = image.resize((224, 224))  # Resize to match model input shape
+    if image.size != (224, 224):
+       image = image.resize((224, 224))
     image = np.array(image) / 255.0   # Normalize pixel values (0-1)
     image = np.expand_dims(image, axis=0)  # Add batch dimension
     return image
 
+# def predict_image(image):
+#     """
+#     Run prediction on the image and return the class label & confidence score.
+#     """
+#     processed_image = preprocess_image(image)
+#     predictions = model.predict(processed_image)[0]  # Get predictions
+#     class_index = np.argmax(predictions)  # Get the highest confidence index
+#     confidence = predictions[class_index]  # Confidence score
+#     print({"class": CLASS_NAMES[class_index], "confidence": float(confidence), "predictions": predictions})
+#     return {"class": CLASS_NAMES[class_index], "confidence": float(confidence)}
+
 def predict_image(image):
     """
     Run prediction on the image and return the class label & confidence score.
+    If the highest prediction's confidence is below 0.70, return the second-highest.
     """
     processed_image = preprocess_image(image)
-    predictions = model.predict(processed_image)[0]  # Get predictions
-    class_index = np.argmax(predictions)  # Get the highest confidence index
-    confidence = predictions[class_index]  # Confidence score
+    predictions = model.predict(processed_image)[0]  # Array of probabilities for each class
+    
+    # Get the indices sorted by prediction confidence (highest first)
+    sorted_indices = np.argsort(predictions)[::-1]
+    
+    top_index = sorted_indices[0]
+    top_confidence = predictions[top_index]
+    # print("Top index: ", top_index)
+    # print("Top confidence: ", top_confidence)
+    # if top_confidence < 0.70 and len(sorted_indices) > 1:
+    #     class_index = sorted_indices[1]
+    #     confidence = predictions[class_index]
+    #     print("Second top: ", confidence)
+    # else:
+    #     class_index = top_index
+    #     confidence = top_confidence
 
-    return {"class": CLASS_NAMES[class_index], "confidence": float(confidence)}
+    return {"class": CLASS_NAMES[top_index], "confidence": float(top_confidence)}
 
 class ImageClassificationAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -476,7 +582,7 @@ class VerifyEmailView(APIView):
             return Response({"error": "Invalid request."}, status=400)
 
 class DepartmentListView(generics.ListAPIView):
-    permission_classes = [IsSuperAdmin]
+    permission_classes = [AllowAny]
     queryset = Department.objects.all()
     serializer_class = DepartmentList
 
