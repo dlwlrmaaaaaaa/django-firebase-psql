@@ -607,9 +607,9 @@ class MyRefreshTokenPair(TokenRefreshView):
 
 
 class ReportView(generics.CreateAPIView):
-    permission_classes = [IsAuthenticated, IsCitizen]
+    permission_classes = [AllowAny, IsCitizen]
     serializer_class = AddReportSerializer
-
+    
 
 class DeleteReportView(generics.DestroyAPIView):
     query_set = Report.objects.all()

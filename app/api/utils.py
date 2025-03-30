@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 from django.conf import settings
 from pathlib import Path
-BASE_DIR = Path(__file__).resolve().parent.parent  # Adjust based on folder structure
-FIREBASE_KEY_PATH = BASE_DIR / "app" / "config" / "crisp-63736-firebase-adminsdk-r1i8j-7cca171a94.json"
+BASE_DIR = Path(__file__).resolve().parent.parent 
+FIREBASE_KEY_PATH = BASE_DIR / "app" / "config" / "crisp-63736-firebase-adminsdk-r1i8j-4f63ef8ace.json"
 
 
 def generate_firebase_token(user):
