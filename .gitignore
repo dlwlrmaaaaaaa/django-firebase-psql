@@ -10,3 +10,5 @@ app/settings.py/
 
 ./app/app/temporary_path
 /app/temporary_path
+app/app/config
+app/config

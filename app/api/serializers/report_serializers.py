@@ -13,9 +13,10 @@ from django.utils.timezone import now, timedelta
 from geopy.distance import geodesic
 import logging
 import time
+import math
 User = get_user_model()
 
-DUPLICATE_RADIUS_KM = 0.1
+DUPLICATE_RADIUS_KM = 0.05
 EMERGENCY_THRESHOLD_MINUTES = 60
 NON_EMERGENCY_THRESHOLD_DAYS = 2
 IMAGE_UPLOAD_PATH = "images_report/"
