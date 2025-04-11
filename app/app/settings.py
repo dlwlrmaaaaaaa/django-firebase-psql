@@ -115,17 +115,12 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-# import dj_database_url
+import dj_database_url
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB'),
-        'USER': os.environ.get('POSTGRES_USER'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
-        'HOST': 'db', 
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL')
+    )
 }
 
 # DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_efq8_user:PBtfXC77iElTxeRKEpzb2Fki3Cc4b23Q@dpg-cu64622j1k6c73f45dc0-a.singapore-postgres.render.com/crisp_postgresql_db_efq8')
