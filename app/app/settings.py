@@ -123,7 +123,7 @@ DATABASES = {
         'NAME': os.environ.get('POSTGRES_DB'),
         'USER': os.environ.get('POSTGRES_USER'),
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
-        'HOST': 'db',  # 👈 THIS is the fix — must match the service name in docker-compose
+        'HOST': 'db', 
         'PORT': '5432',
     }
 }
