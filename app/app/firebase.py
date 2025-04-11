@@ -4,7 +4,7 @@ from firebase_admin import credentials, storage, firestore
 import os
 from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent  # Adjust based on folder structure
-FIREBASE_KEY_PATH = BASE_DIR / "app" / "config" / "crisp-63736-firebase-adminsdk-r1i8j-4f63ef8ace.json"
+FIREBASE_KEY_PATH = BASE_DIR / "app" / "config" / "crisp-63736-firebase-adminsdk-r1i8j-4889c57ed1.json"
 
 cred = credentials.Certificate(str(FIREBASE_KEY_PATH))
 

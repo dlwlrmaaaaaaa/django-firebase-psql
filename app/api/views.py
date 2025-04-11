@@ -218,17 +218,17 @@ def predict_image(image):
     
     top_index = sorted_indices[0]
     top_confidence = predictions[top_index]
-    print("Top index: ", top_index)
-    print("Top confidence: ", top_confidence)
-    if top_confidence < 0.70 and len(sorted_indices) > 1:
-        class_index = sorted_indices[1]
-        confidence = predictions[class_index]
-        print("Second top: ", confidence)
-    else:
-        class_index = top_index
-        confidence = top_confidence
+    # print("Top index: ", top_index)
+    # print("Top confidence: ", top_confidence)
+    # if top_confidence < 0.70 and len(sorted_indices) > 1:
+    #     class_index = sorted_indices[1]
+    #     confidence = predictions[class_index]
+    #     print("Second top: ", confidence)
+    # else:
+    #     class_index = top_index
+    #     confidence = top_confidence
 
-    return {"class": CLASS_NAMES[class_index], "confidence": float(confidence)}
+    return {"class": CLASS_NAMES[top_index], "confidence": float(top_confidence)}
 
 class ImageClassificationAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser)
