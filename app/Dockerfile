@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
-# Install system dependencies for psycopg2 and TensorFlow
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
@@ -17,23 +17,16 @@ RUN apt-get update && apt-get install -y \
     libsm6 \
     libxext6 \
     libxrender-dev \
-    netcat \
     && rm -rf /var/lib/apt/lists/*
-
-
 
 COPY requirements.txt .
 
 RUN pip install --upgrade pip
-
 RUN pip install -r requirements.txt
 
 COPY . .
 
 EXPOSE 8000
 
-COPY entrypoint.sh /app/entrypoint.sh
-
-RUN chmod +x /app/entrypoint.sh
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Use CMD to run the commands instead of entrypoint
+CMD bash -c "python manage.py makemigrations && python manage.py migrate && gunicorn app.wsgi:application --bind 0.0.0.0:8000"
