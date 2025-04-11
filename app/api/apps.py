@@ -38,6 +38,8 @@ class ApiConfig(AppConfig):
                     "role": "superadmin",
                 }
 
+          
+
                 user, created = User.objects.get_or_create(username=admin_data["username"], defaults=admin_data)
 
                 if created:

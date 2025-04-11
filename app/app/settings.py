@@ -118,12 +118,12 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import dj_database_url
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL')
-    )
+    # 'default': dj_database_url.config(
+    #     default=os.environ.get('DATABASE_URL')
+    # )
 }
 
-# DATABASES['default'] = dj_database_url.parse('postgresql://crisp_postgresql_db_efq8_user:PBtfXC77iElTxeRKEpzb2Fki3Cc4b23Q@dpg-cu64622j1k6c73f45dc0-a.singapore-postgres.render.com/crisp_postgresql_db_efq8')
+DATABASES['default'] = dj_database_url.parse('postgresql://postgres:qkceAuhBFtQmGCogUjfjGBuLNAalbMeP@switchback.proxy.rlwy.net:12091/railway')
 # Username: crisp_postgresql_db_efq8_user
 # Password: PBtfXC77iElTxeRKEpzb2Fki3Cc4b23Q
 # Host: dpg-cu64622j1k6c73f45dc0-a.singapore-postgres.render.com
